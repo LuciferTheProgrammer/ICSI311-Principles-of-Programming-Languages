@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 
 // This is the Lexer Class, which reads a given text letter by letter and converts it into a collection
-// of words. [David is here!]
+// of words.
 public class Lexer {
 
     // The hash map to contain the known keywords with their specified token type.
