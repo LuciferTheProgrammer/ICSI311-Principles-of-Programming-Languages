@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import Tran.*;
-
-import java.awt.*;
-
 public class PrivateLexer2Tests {
     @Test
     public void KeyWordLexerTest_1() {
@@ -249,7 +246,6 @@ public class PrivateLexer2Tests {
                 "\n");
         try {
             var res = l.Lex();
-            System.out.println("Token: " + res.get(128).getType() + " value: " + res.get(128).getValue());
             Assertions.assertEquals("updateClock",res.get(128).getValue());
         }
         catch (Exception e) {
