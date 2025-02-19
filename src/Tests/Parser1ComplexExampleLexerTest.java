@@ -20,7 +20,7 @@ public class Parser1ComplexExampleLexerTest{
 			"    \n"+
 			"" );
 		var tokens = lexer.Lex();
-		Assertions.assertEquals(69, tokens.size());
+		Assertions.assertEquals(70, tokens.size());
 		Assertions.assertEquals(Token.TokenTypes.INTERFACE, tokens.get(0).getType());
 		Assertions.assertEquals(Token.TokenTypes.WORD, tokens.get(1).getType());
 		Assertions.assertEquals("complexExample", tokens.get(1).getValue());
@@ -120,6 +120,7 @@ public class Parser1ComplexExampleLexerTest{
 		Assertions.assertEquals(Token.TokenTypes.LPAREN, tokens.get(65).getType());
 		Assertions.assertEquals(Token.TokenTypes.RPAREN, tokens.get(66).getType());
 		Assertions.assertEquals(Token.TokenTypes.NEWLINE, tokens.get(67).getType());
-		Assertions.assertEquals(Token.TokenTypes.DEDENT, tokens.get(68).getType());
+		Assertions.assertEquals(Token.TokenTypes.NEWLINE, tokens.get(68).getType());
+		Assertions.assertEquals(Token.TokenTypes.DEDENT, tokens.get(69).getType());
 	}
 }

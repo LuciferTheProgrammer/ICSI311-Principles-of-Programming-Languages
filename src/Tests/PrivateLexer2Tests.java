@@ -213,7 +213,7 @@ public class PrivateLexer2Tests {
                 "\n" +
                 "\trepeat() : string t\n" +
                 "\t\tt = \"\" { loop replaces for/while/do-until }\n" +
-                "\t\tloop x.times() { times is a method on number that returns an iterator (1,2,3,4, ..., x)\n" +
+                "\t\tloop x.times() { times is a method on number that returns an iterator (1,2,3,4, ..., x)}\n" +
                 "\t\t\tt = t + y\n" +
                 "\n" +
                 "\twhileTest() \n" +
