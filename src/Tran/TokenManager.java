@@ -3,35 +3,59 @@ import java.util.List;
 import java.util.Optional;
 
 public class TokenManager {
+    private List<Token> token;
 
     public TokenManager(List<Token> tokens) {
+        token = tokens;
     }
 
     public boolean done() {
-	    return false;
+        if(token.isEmpty())
+            return true;
+        else
+          return false;
     }
 
     public Optional<Token> matchAndRemove(Token.TokenTypes t) {
-	    return Optional.empty();
+        if(!token.isEmpty()) {
+            if (token.get(0).getType() == t) {
+                Token holder = token.get(0);
+                token.remove(0);
+                return Optional.of(holder);
+            }
+        }
+        return Optional.empty();
     }
 
     public Optional<Token> peek(int i) {
-	    return Optional.empty();
+        if(!token.isEmpty()) {
+            Token holder = token.get(i);
+            return Optional.of(holder);
+        }
+        else
+	        return Optional.empty();
     }
 
     public boolean nextTwoTokensMatch(Token.TokenTypes first, Token.TokenTypes second) {
-	    return false;
+        if(token.get(0).getType() == first && token.get(1).getType() == second) {
+            return true;
+        }
+        else
+	        return false;
     }
 
     public boolean nextIsEither(Token.TokenTypes first, Token.TokenTypes second) {
-	    return false;
+        if(token.get(0).getType() == first || token.get(0).getType() == second)
+            return true;
+        else
+	        return false;
     }
 
     public int getCurrentLine() {
-            return -1;
+            return token.get(0).getLineNumber();
     }
 
     public int getCurrentColumnNumber() {
-            return -1;
+            return token.get(0).getColumnNumber();
     }
 }
