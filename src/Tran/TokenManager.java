@@ -4,6 +4,7 @@ import java.util.Optional;
 
 public class TokenManager {
     private List<Token> token;
+    private String container;
 
     public TokenManager(List<Token> tokens) {
         token = tokens;
@@ -19,6 +20,7 @@ public class TokenManager {
     public Optional<Token> matchAndRemove(Token.TokenTypes t) {
         if(!token.isEmpty()) {
             if (token.get(0).getType() == t) {
+                container = token.get(0).getValue();
                 Token holder = token.get(0);
                 token.remove(0);
                 return Optional.of(holder);
@@ -57,5 +59,8 @@ public class TokenManager {
 
     public int getCurrentColumnNumber() {
             return token.get(0).getColumnNumber();
+    }
+    public String getCurrentText() {
+        return container;
     }
 }
