@@ -17,20 +17,41 @@ public class Parser {
         manageTokens = new TokenManager(tokens);
     }
 
-    public void RequireNewLine() {
-
+    public void RequireNewLine() throws SyntaxErrorException {
+        if (!(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent()))
+            throw new SyntaxErrorException("Interface statements must have a new line", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        while(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent());
     }
 
     public void Tran() throws SyntaxErrorException {
 
     }
-    public Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException{
-            InterfaceNode node = new InterfaceNode();
-            if(!(manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isPresent()))
-                return Optional.empty();
-            if(!(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()))
-                throw new SyntaxErrorException("Interface Statements must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-            node.name = manageTokens.getCurrentText();
-            return Optional.of(node);
+
+    public Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
+        InterfaceNode node = new InterfaceNode();
+        if (!(manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isPresent()))
+            return Optional.empty();
+        if (!(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()))
+            throw new SyntaxErrorException("Interface statements must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        node.name = manageTokens.getCurrentText();
+        RequireNewLine();
+        if (!(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isPresent()))
+            throw new SyntaxErrorException("Interface statements must have an indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+
+
+        return Optional.of(node);
     }
+    /*public Optional<MethodHeaderNode> methods() {
+        MethodHeaderNode methodHeaderNode = new MethodHeaderNode();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+            methodHeaderNode.name = manageTokens.getCurrentText();
+            if((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isPresent()))
+                while(!(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isPresent())) {
+
+                }
+        }
+    }
+
+}
+*/
 }
