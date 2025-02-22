@@ -63,4 +63,7 @@ public class TokenManager {
     public String getCurrentText() {
         return container;
     }
+    public List<Token> getToken() {
+        return token;
+    }
 }
