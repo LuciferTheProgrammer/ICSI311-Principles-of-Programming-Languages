@@ -1,7 +1,9 @@
 package Tran;
 import AST.*;
-import javax.swing.text.html.Option;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 
 public class Parser {
     private TokenManager manageTokens;
