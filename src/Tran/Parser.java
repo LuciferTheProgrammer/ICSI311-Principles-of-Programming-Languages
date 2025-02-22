@@ -14,8 +14,13 @@ public class Parser {
     }
 
     public void RequireNewLine() throws SyntaxErrorException {
-        manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE);
-        while(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent()) ;
+        List<Token> holder = manageTokens.getToken();
+        if(!(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent())) {
+            if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
+                return;
+            throw new SyntaxErrorException("Interface statements must a newline", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        while(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent());
     }
 
     public void Tran() throws SyntaxErrorException {
