@@ -73,7 +73,7 @@ public class Parser {
         RequireNewLine();
         return Optional.of(methodHeaderNode);
     }
-    public Optional<VariableDeclarationNode> variableDeclarations () throws SyntaxErrorException {
+    public Optional<VariableDeclarationNode> variableDeclarations() {
         VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
         if((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent())) {
             variableDeclarationNode.type = manageTokens.getCurrentText();
