@@ -17,7 +17,7 @@ public class Parser {
 
     public void RequireNewLine() throws SyntaxErrorException {
         List<Token> holder = manageTokens.getToken();
-        if(!(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent())) {
+        if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
             if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
                 return;
             throw new SyntaxErrorException("Interface statements must a newline", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -33,20 +33,19 @@ public class Parser {
             }
         }
     }
-
     public Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
         InterfaceNode node = new InterfaceNode();
-        if (!(manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isPresent()))
+        if ((manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isEmpty()))
             return Optional.empty();
-        if (!(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()))
+        if ((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()))
             throw new SyntaxErrorException("Interface statements must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         node.name = manageTokens.getCurrentText();
         RequireNewLine();
-        if (!(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isPresent()))
+        if ((manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()))
             throw new SyntaxErrorException("Interface statements must have an indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        while(!(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isPresent()) && !(manageTokens.getToken().isEmpty())) {
+        while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
             Optional<MethodHeaderNode> test = methodHeaders();
-            if (!(test.isPresent())) {
+            if ((test.isEmpty())) {
                 throw new SyntaxErrorException("Interface statements must have methods", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             else {
@@ -59,14 +58,15 @@ public class Parser {
 
     public Optional<MethodHeaderNode> methodHeaders() throws SyntaxErrorException {
         MethodHeaderNode methodHeaderNode = new MethodHeaderNode();
-        if (!(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()))
+        if ((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()))
             return Optional.empty();
         methodHeaderNode.name = manageTokens.getCurrentText();
-        if ((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isPresent())) {
-            checkParameterVariableSetUp(methodHeaderNode);
-        }
-        if(!(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isPresent()))
+        if ((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty()))
+            throw new SyntaxErrorException("Interface statements must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        checkParameterVariableSetUp(methodHeaderNode);
+        if((manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()))
             throw new SyntaxErrorException("Interface statements must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        //Optional for methods on interface.
         if((manageTokens.matchAndRemove(Token.TokenTypes.COLON).isPresent())) {
             checkReturnVariableSetUp(methodHeaderNode);
         }
@@ -85,17 +85,13 @@ public class Parser {
         return Optional.empty();
     }
     public void checkParameterVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
-        VariableDeclarationNode variableDeclaration = new VariableDeclarationNode();
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
-            variableDeclaration = holder.get();
-            sample.parameters.add(variableDeclaration);
+            sample.parameters.add(holder.get());
             while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
                 Optional<VariableDeclarationNode> holder2 = variableDeclarations();
-                VariableDeclarationNode variableDeclaration2 = new VariableDeclarationNode();
                 if (holder2.isPresent()) {
-                    variableDeclaration2 = holder2.get();
-                    sample.parameters.add(variableDeclaration2);
+                    sample.parameters.add(holder2.get());
                 }
                 else
                     throw new SyntaxErrorException("Interface statements needs correct parameter variable declarations", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -104,16 +100,12 @@ public class Parser {
     }
     public void checkReturnVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
-        VariableDeclarationNode variableDeclaration = new VariableDeclarationNode();
         if(holder.isPresent()) {
-            variableDeclaration = holder.get();
-            sample.returns.add(variableDeclaration);
+            sample.returns.add(holder.get());
             while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
                 Optional<VariableDeclarationNode> holder2 = variableDeclarations();
-                VariableDeclarationNode variableDeclaration2 = new VariableDeclarationNode();
                 if (holder2.isPresent()) {
-                    variableDeclaration2 = holder2.get();
-                    sample.returns.add(variableDeclaration2);
+                    sample.returns.add(holder2.get());
                 }
                 else
                     throw new SyntaxErrorException("Interface statements needs correct return variable declarations", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
