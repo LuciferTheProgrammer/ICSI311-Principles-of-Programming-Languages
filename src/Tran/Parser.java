@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+//The Parser Class
 public class Parser {
     private TokenManager manageTokens;
     private TranNode currentNode;
@@ -15,7 +16,7 @@ public class Parser {
         manageTokens = new TokenManager(tokens);
     }
 
-    public void RequireNewLine() throws SyntaxErrorException {
+    private void RequireNewLine() throws SyntaxErrorException {
         List<Token> holder = manageTokens.getToken();
         if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
             if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
@@ -33,7 +34,7 @@ public class Parser {
             }
         }
     }
-    public Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
+    private Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
         InterfaceNode node = new InterfaceNode();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isEmpty()))
             return Optional.empty();
@@ -56,7 +57,7 @@ public class Parser {
         return Optional.of(node);
     }
 
-    public Optional<MethodHeaderNode> methodHeaders() throws SyntaxErrorException {
+    private Optional<MethodHeaderNode> methodHeaders() throws SyntaxErrorException {
         MethodHeaderNode methodHeaderNode = new MethodHeaderNode();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()))
             return Optional.empty();
@@ -73,7 +74,7 @@ public class Parser {
         RequireNewLine();
         return Optional.of(methodHeaderNode);
     }
-    public Optional<VariableDeclarationNode> variableDeclarations() {
+    private Optional<VariableDeclarationNode> variableDeclarations() {
         VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
         if((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent())) {
             variableDeclarationNode.type = manageTokens.getCurrentText();
@@ -84,7 +85,7 @@ public class Parser {
         }
         return Optional.empty();
     }
-    public void checkParameterVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
+    private void checkParameterVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
             sample.parameters.add(holder.get());
@@ -98,7 +99,7 @@ public class Parser {
             }
         }
     }
-    public void checkReturnVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
+    private void checkReturnVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
             sample.returns.add(holder.get());
