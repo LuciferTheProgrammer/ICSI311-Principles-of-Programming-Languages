@@ -5,17 +5,36 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
-//The Parser Class
+// The Parser Class takes in a stream of tokens, using the EBNF rules for the Tran Program, generates and returns
+// an Optional<> of a specific AST Node.
 public class Parser {
+
+    // The TokenManager instance field to store the list of tokens to be processed.
     private TokenManager manageTokens;
+
+    // The TranNode instance field to store the list of classes and interfaces.
     private TranNode currentNode;
 
 
+    /**
+     * The constructor takes in a TranNode and a list of tokens and sets the TranNode instance field as well
+     * as the TokenManager instance field.
+     * @param top The TranNode.
+     *
+     * @param tokens The list of tokens.
+     */
     public Parser(TranNode top, List<Token> tokens) {
         currentNode = top;
         manageTokens = new TokenManager(tokens);
     }
 
+    /**
+     * This method reads and expects a new line token after each method header, if there is none it throws
+     * a syntax error. However, if the last token is a dedent token, then the Parser doesn't expect a new line
+     * token and therefore no error is thrown.
+     *
+     * @throws SyntaxErrorException When no new line token is present after the method header.
+     */
     private void RequireNewLine() throws SyntaxErrorException {
         List<Token> holder = manageTokens.getToken();
         if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
@@ -26,6 +45,11 @@ public class Parser {
         while(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent());
     }
 
+    /**
+     *
+     *
+     * @throws SyntaxErrorException
+     */
     public void Tran() throws SyntaxErrorException {
         while(!manageTokens.done()) {
             Optional<InterfaceNode> holder = interfaceStatement();
