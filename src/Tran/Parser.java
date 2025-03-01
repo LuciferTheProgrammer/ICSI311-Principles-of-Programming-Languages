@@ -56,6 +56,8 @@ public class Parser {
             if (holder.isPresent()) {
                 currentNode.Interfaces.add(holder.get());
             }
+            else
+                throw new SyntaxErrorException("Expected an interface", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
     }
 
