@@ -14,7 +14,7 @@ public class TokenManager {
     /**
      * The constructor takes in a list of tokens and sets it to the token instance field.
      *
-     * @param tokens The List of tokens.
+     * @param tokens The list of tokens.
      */
     public TokenManager(List<Token> tokens) {
         token = tokens;
@@ -24,7 +24,7 @@ public class TokenManager {
      * This method returns true once all the tokens from the list have been processed and thereby removed.
      * If not, then the processing of the list of tokens isn't over yet and returns false.
      *
-     * @return The status of whether the list of tokens has been fully processed yet.
+     * @return The status of whether the list of tokens has been fully processed.
      */
     public boolean done() {
         if(token.isEmpty())
@@ -35,12 +35,12 @@ public class TokenManager {
 
     /**
      * This method takes in a token with the specified type and checks if it's a match to the current token
-     * type on the current position on the list of tokens. If it's a match then the current token is removed
+     * type on the current position in the list of tokens. If it's a match then the current token is removed
      * from the list and if it's not then there is no change. This also returns the token that was matched
      * removed. If there is no match, then an empty value is returned.
      *
      * @param t The token type.
-     * @return The token that was a matched and removed.
+     * @return The token that was matched and removed.
      */
     public Optional<Token> matchAndRemove(Token.TokenTypes t) {
         if(!token.isEmpty()) {
@@ -134,7 +134,7 @@ public class TokenManager {
     /**
      * This method returns the list of tokens.
      *
-     * @return The List of tokens.
+     * @return The list of tokens.
      */
     public List<Token> getToken() {
         return token;

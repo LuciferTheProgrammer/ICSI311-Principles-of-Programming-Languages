@@ -39,14 +39,14 @@ public class Parser {
         if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
             if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
                 return;
-            throw new SyntaxErrorException("Interface statements must a newline", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Expected a newline", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         while(manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isPresent());
     }
 
     /**
      * This method adds a list of interfaces and classes to the TranNode instance field while the list of
-     * tokens is being processed.
+     * tokens is being processed through the TokenManager instance field.
      *
      * @throws SyntaxErrorException When an error occurs in the program.
      */
@@ -63,7 +63,7 @@ public class Parser {
      * This method creates an interface node, then checks the list of tokens for the presence of an
      * interface keyword, name of the interface, a new line, proper indentation levels, method headers with
      * the appropriate parameter variables and return types. If there is an absence of these properties
-     * in the interface, then a syntax error is thrown. When the process is complete, all the properties
+     * in the interface, then a syntax error is thrown. When the process is complete, all the methods
      * would be added to the interface node which is then returned.
      *
      * @return The Interface Node.
@@ -74,15 +74,15 @@ public class Parser {
         if ((manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isEmpty()))
             return Optional.empty();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()))
-            throw new SyntaxErrorException("Interface statements must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Interface must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         node.name = manageTokens.getCurrentText();
         RequireNewLine();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()))
-            throw new SyntaxErrorException("Interface statements must have an indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Interface must have an indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
             Optional<MethodHeaderNode> test = methodHeaders();
             if ((test.isEmpty())) {
-                throw new SyntaxErrorException("Interface statements must have methods with name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                throw new SyntaxErrorException("Interface must have method with a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             else {
                 MethodHeaderNode method = test.get();
@@ -108,11 +108,11 @@ public class Parser {
             return Optional.empty();
         methodHeaderNode.name = manageTokens.getCurrentText();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty()))
-            throw new SyntaxErrorException("Interface statements must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         checkParameterVariableSetUp(methodHeaderNode);
         if((manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()))
-            throw new SyntaxErrorException("Interface statements must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        // Optional for methods on interface and class.
+            throw new SyntaxErrorException("Method must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        // Optional for methods on an interface and class.
         if((manageTokens.matchAndRemove(Token.TokenTypes.COLON).isPresent())) {
             checkReturnVariableSetUp(methodHeaderNode);
         }
@@ -125,7 +125,7 @@ public class Parser {
      * of the variable and then proceeds to store those values to the variable declaration node which is
      * then returned.
      *
-     * @return Th variable declaration node.
+     * @return The variable declaration node.
      */
     public Optional<VariableDeclarationNode> variableDeclarations() {
         VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
@@ -157,7 +157,7 @@ public class Parser {
                     sample.parameters.add(holder2.get());
                 }
                 else
-                    throw new SyntaxErrorException("Interface statements needs correct parameter variable declarations", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                    throw new SyntaxErrorException("Method needs a correct parameter variable declaration", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
         }
     }
@@ -180,7 +180,7 @@ public class Parser {
                     sample.returns.add(holder2.get());
                 }
                 else
-                    throw new SyntaxErrorException("Interface statements needs correct return variable declarations", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                    throw new SyntaxErrorException("Method needs a correct return variable declaration", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
         }
     }
