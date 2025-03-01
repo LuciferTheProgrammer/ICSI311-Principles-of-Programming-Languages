@@ -15,12 +15,11 @@ public class Parser {
     // The TranNode instance field to store the list of classes and interfaces.
     private TranNode currentNode;
 
-
     /**
      * The constructor takes in a TranNode and a list of tokens and sets the TranNode instance field as well
      * as the TokenManager instance field.
-     * @param top The TranNode.
      *
+     * @param top The TranNode.
      * @param tokens The list of tokens.
      */
     public Parser(TranNode top, List<Token> tokens) {
@@ -35,7 +34,7 @@ public class Parser {
      *
      * @throws SyntaxErrorException When no new line token is present after the method header.
      */
-    private void RequireNewLine() throws SyntaxErrorException {
+    public void RequireNewLine() throws SyntaxErrorException {
         List<Token> holder = manageTokens.getToken();
         if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
             if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
@@ -46,9 +45,10 @@ public class Parser {
     }
 
     /**
+     * This method adds a list of interfaces and classes to the TranNode instance field while the list of
+     * tokens is being processed.
      *
-     *
-     * @throws SyntaxErrorException
+     * @throws SyntaxErrorException When an error occurs in the program.
      */
     public void Tran() throws SyntaxErrorException {
         while(!manageTokens.done()) {
@@ -58,7 +58,18 @@ public class Parser {
             }
         }
     }
-    private Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
+
+    /**
+     * This method creates an interface node, then checks the list of tokens for the presence of an
+     * interface keyword, name of the interface, a new line, proper indentation levels, method headers with
+     * the appropriate parameter variables and return types. If there is an absence of these properties
+     * in the interface, then a syntax error is thrown. When the process is complete, all the properties
+     * would be added to the interface node which is then returned.
+     *
+     * @return The Interface Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
+    public Optional<InterfaceNode> interfaceStatement() throws SyntaxErrorException {
         InterfaceNode node = new InterfaceNode();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.INTERFACE).isEmpty()))
             return Optional.empty();
@@ -71,7 +82,7 @@ public class Parser {
         while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
             Optional<MethodHeaderNode> test = methodHeaders();
             if ((test.isEmpty())) {
-                throw new SyntaxErrorException("Interface statements must have methods", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                throw new SyntaxErrorException("Interface statements must have methods with name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             else {
                 MethodHeaderNode method = test.get();
@@ -81,7 +92,17 @@ public class Parser {
         return Optional.of(node);
     }
 
-    private Optional<MethodHeaderNode> methodHeaders() throws SyntaxErrorException {
+    /**
+     * This method creates a method header node, then checks the list of tokens for the presence of the name
+     * of the method, a left parenthesis, then parameter variables, right parenthesis, a colon (optional),
+     * but a colon is required with return variables (optional), and then finally a new line. If there is an
+     * absence of the required properties, then a syntax error is thrown. When the process is complete all the
+     * properties would be added to the method header node which is then returned.
+     *
+     * @return The Method Header Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
+    public Optional<MethodHeaderNode> methodHeaders() throws SyntaxErrorException {
         MethodHeaderNode methodHeaderNode = new MethodHeaderNode();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()))
             return Optional.empty();
@@ -91,14 +112,22 @@ public class Parser {
         checkParameterVariableSetUp(methodHeaderNode);
         if((manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()))
             throw new SyntaxErrorException("Interface statements must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        //Optional for methods on interface.
+        // Optional for methods on interface and class.
         if((manageTokens.matchAndRemove(Token.TokenTypes.COLON).isPresent())) {
             checkReturnVariableSetUp(methodHeaderNode);
         }
         RequireNewLine();
         return Optional.of(methodHeaderNode);
     }
-    private Optional<VariableDeclarationNode> variableDeclarations() {
+
+    /**
+     * This method  creates a variable declaration node, then checks the list of tokens for the type and name
+     * of the variable and then proceeds to store those values to the variable declaration node which is
+     * then returned.
+     *
+     * @return Th variable declaration node.
+     */
+    public Optional<VariableDeclarationNode> variableDeclarations() {
         VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
         if((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent())) {
             variableDeclarationNode.type = manageTokens.getCurrentText();
@@ -109,7 +138,16 @@ public class Parser {
         }
         return Optional.empty();
     }
-    private void checkParameterVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
+
+    /**
+     * This method takes in a method header node and checks the list of tokens for variable declarations, for
+     * each variable declaration is stored in the parameters list of the method header node. This method
+     * uses a comma as a separator for the variable declarations. If there is a mismatch a syntax error is thrown.
+     *
+     * @param sample The Method Header Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
+    public void checkParameterVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
             sample.parameters.add(holder.get());
@@ -123,7 +161,16 @@ public class Parser {
             }
         }
     }
-    private void checkReturnVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
+
+    /**
+     * This method takes in a method header node and checks the list of tokens for variable declarations, for
+     * each variable declaration is stored in the returns list of the method header node. This method
+     * uses a comma as a separator for the variable declarations. If there is a mismatch a syntax error is thrown.
+     *
+     * @param sample The Method Header Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
+    public void checkReturnVariableSetUp(MethodHeaderNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
             sample.returns.add(holder.get());
