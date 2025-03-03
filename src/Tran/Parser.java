@@ -1,5 +1,7 @@
 package Tran;
 import AST.*;
+
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -186,4 +188,130 @@ public class Parser {
             }
         }
     }
+
+    public Optional<ClassNode> classStatements() throws SyntaxErrorException {
+        ClassNode classNode = new ClassNode();
+        if((manageTokens.matchAndRemove(Token.TokenTypes.CLASS).isEmpty())) {
+            return Optional.empty();
+        }
+        if((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty())) {
+            throw new SyntaxErrorException("Class must have a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        classNode.name = manageTokens.getCurrentText();
+        checkForInterfaces(classNode);
+        RequireNewLine();
+
+        if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
+            throw new SyntaxErrorException("Class must have a proper indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
+            Optional<ConstructorNode> holder = constructor();
+            if (holder.isPresent()) {
+                classNode.constructors.add(holder.get());
+            }
+            Optional<MemberNode> holder2 = member();
+            if(holder2.isPresent()) {
+                MemberNode placement = holder2.get();
+                classNode.members.add(holder2.get());
+                while(manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
+                    if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+                        placement.declaration.name = manageTokens.getCurrentText();
+                        classNode.members.add(placement);
+                    }
+                }
+                RequireNewLine();
+            }
+        }
+
+        return Optional.of(classNode);
+    }
+
+    public void checkForInterfaces(ClassNode sample) throws SyntaxErrorException {
+        if((manageTokens.matchAndRemove(Token.TokenTypes.IMPLEMENTS).isEmpty())) {
+            return;
+        }
+        if((manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty())) {
+            throw new SyntaxErrorException("Class must implement an interface with a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        sample.interfaces.add(manageTokens.getCurrentText());
+        while((manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent())) {
+            if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+                sample.interfaces.add(manageTokens.getCurrentText());
+            }
+            else
+                throw new SyntaxErrorException("Class must implement an interface with a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+    }
+
+    public Optional<ConstructorNode> constructor() throws SyntaxErrorException {
+        ConstructorNode constructorNode = new ConstructorNode();
+        if((manageTokens.matchAndRemove(Token.TokenTypes.CONSTRUCT).isEmpty())) {
+            return Optional.empty();
+        }
+        if((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty())) {
+            throw new SyntaxErrorException("Constructor must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        checkParameterConstructor(constructorNode);
+        if(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
+            throw new SyntaxErrorException("Constructor must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        RequireNewLine();
+        //Set Up Method Body for later
+        //.......
+        return Optional.of(constructorNode);
+    }
+
+    public void checkParameterConstructor(ConstructorNode sample) throws SyntaxErrorException {
+        Optional<VariableDeclarationNode> holder = variableDeclarations();
+        if(holder.isPresent()) {
+            sample.parameters.add(holder.get());
+            while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
+                Optional<VariableDeclarationNode> holder2 = variableDeclarations();
+                if (holder2.isPresent()) {
+                    sample.parameters.add(holder2.get());
+                }
+                else
+                    throw new SyntaxErrorException("Constructor needs a correct parameter variable declaration", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+        }
+    }
+
+    public Optional<MemberNode> member() throws SyntaxErrorException {
+        MemberNode memberNode = new MemberNode();
+        Optional<VariableDeclarationNode> variableDeclarations = variableDeclarations();
+        if(variableDeclarations.isPresent()) {
+            memberNode.declaration = variableDeclarations.get();
+            return Optional.of(memberNode);
+        }
+        else
+            return Optional.empty();
+    }
+
+    public Optional<MethodDeclarationNode> methodDeclaration() throws SyntaxErrorException {
+        MethodDeclarationNode methodDeclarationNode = new MethodDeclarationNode();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.SHARED).isPresent()) {
+            methodDeclarationNode.isShared = true;
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.PRIVATE).isPresent()) {
+            methodDeclarationNode.isPrivate = true;
+        }
+        if(!methodDeclarationNode.isShared && !methodDeclarationNode.isPrivate) {
+            throw new SyntaxErrorException("Method declaration expected a specifier", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        Optional<MethodHeaderNode> methodHeader = methodHeaders();
+        if(methodHeader.isEmpty()) {
+            throw new SyntaxErrorException("Method declaration expected a method header", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        methodDeclarationNode.name = methodHeader.get().name;
+        methodDeclarationNode.parameters = methodHeader.get().parameters;
+        methodDeclarationNode.returns = methodHeader.get().returns;
+        //Set Up Method Body for later
+        //.......
+        return Optional.empty();
+    }
+
+    public Optional<StatementNode> statement() throws SyntaxErrorException {
+        return Optional.empty();
+    }
+
 }
