@@ -52,13 +52,18 @@ public class Parser {
      */
     public void Tran() throws SyntaxErrorException {
         while(!manageTokens.done()) {
+            if(manageTokens.getToken().get(0).getType() == Token.TokenTypes.NEWLINE) {
+                manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE);
+            }
             Optional<InterfaceNode> holder = interfaceStatement();
             if (holder.isPresent()) {
                 currentNode.Interfaces.add(holder.get());
             }
-            Optional<ClassNode> holder2 = classStatements();
-            if(holder2.isPresent()) {
-                currentNode.Classes.add(holder2.get());
+            else {
+                Optional<ClassNode> holder2 = classStatements();
+                if (holder2.isPresent()) {
+                    currentNode.Classes.add(holder2.get());
+                }
             }
         }
     }
@@ -306,38 +311,40 @@ public class Parser {
     }
     public List<VariableDeclarationNode> multipleVariableDeclarations() throws SyntaxErrorException {
         List<VariableDeclarationNode> multivariable = new ArrayList<>();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty())
+            return multivariable;
+        String typeName = manageTokens.getCurrentText();
         VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
-        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent())
-            variableDeclarationNode.type = manageTokens.getCurrentText();
+        variableDeclarationNode.type = typeName;
         Optional<VariableDeclarationNode> put = VariableNameValue(variableDeclarationNode);
         if(put.isEmpty())
-            return new ArrayList<>();
+            return multivariable;
         multivariable.add(put.get());
         while(manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
-            Optional<VariableDeclarationNode> placement = VariableNameValue(variableDeclarationNode);
+            VariableDeclarationNode sample = new VariableDeclarationNode();
+            sample.type = typeName;
+            Optional<VariableDeclarationNode> placement = VariableNameValue(sample);
             multivariable.add(placement.get());
         }
         RequireNewLine();
         return multivariable;
     }
     public Optional<VariableDeclarationNode> VariableNameValue(VariableDeclarationNode sample) throws SyntaxErrorException {
-        VariableDeclarationNode holder = new VariableDeclarationNode();
-        holder.type = sample.type;
         if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
             throw new SyntaxErrorException("Expected to have a variable name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        holder.name = manageTokens.getCurrentText();
-        return Optional.of(holder);
+        sample.name = manageTokens.getCurrentText();
+        return Optional.of(sample);
     }
     public void methodBodyConstructor(ConstructorNode sample) throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
-            List<VariableDeclarationNode> list = multipleVariableDeclarations();
-            sample.locals.addAll(list);
-        }
         while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+            List<VariableDeclarationNode> list = multipleVariableDeclarations();
+            if(!list.isEmpty()) {
+                sample.locals.addAll(list);
+            }
             Optional<StatementNode> collector = statement();
             if(collector.isPresent()) {
                 sample.statements.add(collector.get());
@@ -353,11 +360,11 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
-            List<VariableDeclarationNode> list = multipleVariableDeclarations();
-            sample.locals.addAll(list);
-        }
         while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+            List<VariableDeclarationNode> list = multipleVariableDeclarations();
+            if(!list.isEmpty()) {
+                sample.locals.addAll(list);
+            }
             Optional<StatementNode> collector = statement();
             if(collector.isPresent()) {
                 sample.statements.add(collector.get());
@@ -379,8 +386,6 @@ public class Parser {
             if(statement.isPresent()) {
                 statements.add(statement.get());
             }
-            else
-                throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) {
             throw new SyntaxErrorException("Statement expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -418,6 +423,16 @@ public class Parser {
         }
         else
             holder.statements = statements;
+        if(manageTokens.matchAndRemove(Token.TokenTypes.ELSE).isPresent()) {
+            ElseNode elseNode = new ElseNode();
+            RequireNewLine();
+            List<StatementNode> elseStatements = Statements();
+            if(elseStatements.isEmpty()) {
+                throw new SyntaxErrorException("Else statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            elseNode.statements = elseStatements;
+            holder.elseStatement = Optional.of(elseNode);
+        }
         return Optional.of(holder);
     }
 
@@ -448,6 +463,7 @@ public class Parser {
             holder.statements = statements;
         return Optional.of(holder);
     }
+
     public Optional<VariableReferenceNode> toRefer() throws SyntaxErrorException {
         VariableReferenceNode holder = new VariableReferenceNode();
         return Optional.of(holder);
