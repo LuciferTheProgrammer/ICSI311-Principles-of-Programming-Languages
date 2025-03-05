@@ -207,20 +207,20 @@ public class Parser {
             Optional<ConstructorNode> constructorNode = constructor();
             if(constructorNode.isPresent()) {
                 classNode.constructors.add(constructorNode.get());
+                continue;
             }
             List<MemberNode> memberNode = members();
             if(!memberNode.isEmpty()) {
              classNode.members.addAll(memberNode);
+             continue;
             }
             Optional<MethodDeclarationNode> md = methodDeclaration();
             if(md.isPresent()) {
                 classNode.methods.add(md.get());
+                continue;
             }
             else
                 throw new SyntaxErrorException("Class expected a constructor, members, or methods", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        }
-        if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) {
-            throw new SyntaxErrorException("Class expected an ending dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         return Optional.of(classNode);
     }
