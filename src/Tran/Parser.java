@@ -214,18 +214,23 @@ public class Parser {
                 classNode.constructors.add(constructorNode.get());
                 continue;
             }
-            List<MemberNode> memberNode = members();
-            if(!memberNode.isEmpty()) {
-             classNode.members.addAll(memberNode);
-             continue;
+            if(manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
+                if (manageTokens.getTokenSize() > 1 && manageTokens.getToken().get(1).getType() == Token.TokenTypes.LPAREN) {
+                    Optional<MethodDeclarationNode> md = methodDeclaration();
+                    if (md.isPresent()) {
+                        classNode.methods.add(md.get());
+                        continue;
+                    }
+                }
+                else {
+                    List<MemberNode> memberNode = members();
+                    if(!memberNode.isEmpty()) {
+                        classNode.members.addAll(memberNode);
+                        continue;
+                    }
+                }
             }
-            Optional<MethodDeclarationNode> md = methodDeclaration();
-            if(md.isPresent()) {
-                classNode.methods.add(md.get());
-                continue;
-            }
-            else
-                throw new SyntaxErrorException("Class expected a constructor, members, or methods", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Class expected a constructor, member, or method", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         return Optional.of(classNode);
     }
@@ -344,13 +349,14 @@ public class Parser {
             List<VariableDeclarationNode> list = multipleVariableDeclarations();
             if(!list.isEmpty()) {
                 sample.locals.addAll(list);
+                continue;
             }
             Optional<StatementNode> collector = statement();
             if(collector.isPresent()) {
                 sample.statements.add(collector.get());
+                continue;
             }
-            else
-                throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -364,13 +370,14 @@ public class Parser {
             List<VariableDeclarationNode> list = multipleVariableDeclarations();
             if(!list.isEmpty()) {
                 sample.locals.addAll(list);
+                continue;
             }
             Optional<StatementNode> collector = statement();
             if(collector.isPresent()) {
                 sample.statements.add(collector.get());
+                continue;
             }
-            else
-                throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -416,7 +423,6 @@ public class Parser {
         else
             holder.condition = new BooleanOpNode();
         RequireNewLine();
-        //Statements
         List<StatementNode> statements = Statements();
         if(statements.isEmpty()) {
             throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -454,7 +460,6 @@ public class Parser {
         else
             holder.expression = new BooleanOpNode();
         RequireNewLine();
-        //Statements
         List<StatementNode> statements = Statements();
         if(statements.isEmpty()) {
             throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());

@@ -139,4 +139,13 @@ public class TokenManager {
     public List<Token> getToken() {
         return token;
     }
+
+    /**
+     * This method returns the size of the list of tokens.
+     *
+     * @return the size of the list of tokens.
+     */
+    public int getTokenSize() {
+        return token.size();
+    }
 }
