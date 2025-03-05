@@ -1,9 +1,7 @@
 package Tran;
 import AST.*;
-
-import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,8 +56,10 @@ public class Parser {
             if (holder.isPresent()) {
                 currentNode.Interfaces.add(holder.get());
             }
-            else
-                throw new SyntaxErrorException("Expected an interface", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            Optional<ClassNode> holder2 = classStatements();
+            if(holder2.isPresent()) {
+                currentNode.Classes.add(holder2.get());
+            }
         }
     }
 
@@ -200,32 +200,32 @@ public class Parser {
         classNode.name = manageTokens.getCurrentText();
         checkForInterfaces(classNode);
         RequireNewLine();
-
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Class must have a proper indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
-            Optional<ConstructorNode> holder = constructor();
-            if (holder.isPresent()) {
-                classNode.constructors.add(holder.get());
+        while((!manageTokens.done() && manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT)) {
+            RequireNewLine();
+            if (manageTokens.done() || manageTokens.getToken().get(0).getType() == Token.TokenTypes.DEDENT)
+                break;
+            Optional<ConstructorNode> constructorNode = constructor();
+            if(constructorNode.isPresent()) {
+                classNode.constructors.add(constructorNode.get());
+                continue;
             }
-            Optional<MemberNode> holder2 = member();
-            if(holder2.isPresent()) {
-                MemberNode placement = holder2.get();
-                classNode.members.add(holder2.get());
-                while(manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
-                    if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
-                        MemberNode placement2 = new MemberNode();
-                        placement2.declaration = new VariableDeclarationNode();
-                        placement2.declaration.type = placement.declaration.type;
-                        placement2.declaration.name = manageTokens.getCurrentText();
-                        classNode.members.add(placement2);
-                    }
-                }
-                RequireNewLine();
+            List<MemberNode> memberNode = members();
+            if(memberNode.isEmpty()) {
+             classNode.members.addAll(memberNode);
+             continue;
+            }
+            Optional<MethodDeclarationNode> md = methodDeclaration();
+            if(md.isPresent()) {
+                classNode.methods.add(md.get());
+                continue;
             }
         }
-
+        if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) {
+            throw new SyntaxErrorException("Class expected an ending dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
         return Optional.of(classNode);
     }
 
@@ -259,8 +259,7 @@ public class Parser {
             throw new SyntaxErrorException("Constructor must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         RequireNewLine();
-        //Set Up Method Body for later
-        //.......
+        methodBodyConstructor(constructorNode);
         return Optional.of(constructorNode);
     }
 
@@ -278,18 +277,6 @@ public class Parser {
             }
         }
     }
-
-    public Optional<MemberNode> member() throws SyntaxErrorException {
-        MemberNode memberNode = new MemberNode();
-        Optional<VariableDeclarationNode> variableDeclarations = variableDeclarations();
-        if(variableDeclarations.isPresent()) {
-            memberNode.declaration = variableDeclarations.get();
-            return Optional.of(memberNode);
-        }
-        else
-            return Optional.empty();
-    }
-
     public Optional<MethodDeclarationNode> methodDeclaration() throws SyntaxErrorException {
         MethodDeclarationNode methodDeclarationNode = new MethodDeclarationNode();
         if(manageTokens.matchAndRemove(Token.TokenTypes.SHARED).isPresent()) {
@@ -298,9 +285,6 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.PRIVATE).isPresent()) {
             methodDeclarationNode.isPrivate = true;
         }
-        if(!methodDeclarationNode.isShared && !methodDeclarationNode.isPrivate) {
-            throw new SyntaxErrorException("Method declaration expected a specifier", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        }
         Optional<MethodHeaderNode> methodHeader = methodHeaders();
         if(methodHeader.isEmpty()) {
             throw new SyntaxErrorException("Method declaration expected a method header", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -308,70 +292,172 @@ public class Parser {
         methodDeclarationNode.name = methodHeader.get().name;
         methodDeclarationNode.parameters = methodHeader.get().parameters;
         methodDeclarationNode.returns = methodHeader.get().returns;
-        //RequireNewLine();
-        //Set Up Method Body for later
-        //.......
-        return Optional.empty();
+        methodBodyMD(methodDeclarationNode);
+        return Optional.of(methodDeclarationNode);
     }
-
+    public List<MemberNode> members() throws SyntaxErrorException {
+        List<MemberNode> memberNodes = new ArrayList<>();
+        List<VariableDeclarationNode> holder = multipleVariableDeclarations();
+        if(holder.isEmpty()) {
+            return memberNodes;
+        }
+        for(VariableDeclarationNode variableDeclarationNode : holder) {
+            MemberNode placement = new MemberNode();
+            placement.declaration = variableDeclarationNode;
+            memberNodes.add(placement);
+        }
+        return memberNodes;
+    }
+    public List<VariableDeclarationNode> multipleVariableDeclarations() throws SyntaxErrorException {
+        List<VariableDeclarationNode> multivariable = new ArrayList<>();
+        VariableDeclarationNode variableDeclarationNode = new VariableDeclarationNode();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent())
+            variableDeclarationNode.type = manageTokens.getCurrentText();
+        Optional<VariableDeclarationNode> put = VariableNameValue(variableDeclarationNode);
+        if(put.isEmpty())
+            return new ArrayList<>();
+        multivariable.add(put.get());
+        while(manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
+            Optional<VariableDeclarationNode> placement = VariableNameValue(variableDeclarationNode);
+            multivariable.add(placement.get());
+        }
+        RequireNewLine();
+        return multivariable;
+    }
+    public Optional<VariableDeclarationNode> VariableNameValue(VariableDeclarationNode sample) throws SyntaxErrorException {
+        VariableDeclarationNode holder = new VariableDeclarationNode();
+        holder.type = sample.type;
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
+            throw new SyntaxErrorException("Expected to have a variable name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        holder.name = manageTokens.getCurrentText();
+        return Optional.of(holder);
+    }
     public void methodBodyConstructor(ConstructorNode sample) throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(!manageTokens.done() && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
-            List<VariableDeclarationNode> holder = toReturn();
-            sample.locals.addAll(holder);
+        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
+            List<VariableDeclarationNode> list = multipleVariableDeclarations();
+            sample.locals.addAll(list);
         }
-        //Statement (could be many)
-
-        if((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()))
-            throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-    }
-
-    public void methodBodyMethodDeclaration(MethodDeclarationNode sample) throws SyntaxErrorException {
-        if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty())
-            throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        while(!manageTokens.done() && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
-            List<VariableDeclarationNode> holder = toReturn();
-            sample.locals.addAll(holder);
-        }
-        //Statement (could be many)
-
-        if((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()))
-            throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-    }
-
-    public List<VariableDeclarationNode> toReturn() throws SyntaxErrorException {
-        List<VariableDeclarationNode> variableDeclarations = new ArrayList<>();
-        Optional<VariableDeclarationNode> holder = variableDeclarations();
-        if(holder.isEmpty())
-            throw new SyntaxErrorException("Method body expected a variable declaration", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        VariableDeclarationNode declaredVariable = holder.get();
-        variableDeclarations.add(declaredVariable);
-        while((manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent())) {
-            if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
-                VariableDeclarationNode execute = new VariableDeclarationNode();
-                execute.type = declaredVariable.type;
-                execute.name = manageTokens.getCurrentText();
-                variableDeclarations.add(execute);
+        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+            Optional<StatementNode> collector = statement();
+            if(collector.isPresent()) {
+                sample.statements.add(collector.get());
             }
             else
-                throw new SyntaxErrorException("Method body expected a variable name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        RequireNewLine();
-        return variableDeclarations;
+        if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
+            throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
     }
 
-    public List<StatementNode> statements() throws SyntaxErrorException {
-        //List<StatementNode> statements = new ArrayList<>();
-        return new ArrayList<>();
+    public void methodBodyMD(MethodDeclarationNode sample) throws SyntaxErrorException {
+        if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
+            throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT && manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
+            List<VariableDeclarationNode> list = multipleVariableDeclarations();
+            sample.locals.addAll(list);
+        }
+        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+            Optional<StatementNode> collector = statement();
+            if(collector.isPresent()) {
+                sample.statements.add(collector.get());
+            }
+            else
+                throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
+            throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
     }
 
+    public List<StatementNode> Statements() throws SyntaxErrorException {
+        List<StatementNode> statements = new ArrayList<>();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
+            throw new SyntaxErrorException("Indent Expected on statements", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+            Optional<StatementNode> statement = statement();
+            if(statement.isPresent()) {
+                statements.add(statement.get());
+            }
+            else
+                throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) {
+            throw new SyntaxErrorException("Statement expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        return statements;
+    }
     public Optional<StatementNode> statement() throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.IF).isPresent()) {
-
+            Optional<IfNode> ifHolder = ifStatement();
+            if(ifHolder.isPresent()) {
+                return Optional.of(ifHolder.get());
+            }
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.LOOP).isPresent()) {
+            Optional<LoopNode> loopHolder = loopStatement();
+            if(loopHolder.isPresent()) {
+                return Optional.of(loopHolder.get());
+            }
         }
         return Optional.empty();
     }
+    public Optional<IfNode> ifStatement() throws SyntaxErrorException {
+        IfNode holder = new IfNode();
+        Optional<BooleanOpNode> bool = BoolExpTerm();
+        if(bool.isPresent()) {
+            holder.condition = bool.get();
+        }
+        else
+            holder.condition = new BooleanOpNode();
+        RequireNewLine();
+        //Statements
+        List<StatementNode> statements = Statements();
+        if(statements.isEmpty()) {
+            throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        else
+            holder.statements = statements;
+        return Optional.of(holder);
+    }
 
+    public Optional<LoopNode> loopStatement() throws SyntaxErrorException {
+        LoopNode holder = new LoopNode();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+            Optional<VariableReferenceNode> reference = toRefer();
+            VariableReferenceNode variableReferenceNode = reference.get();
+            variableReferenceNode.name = manageTokens.getCurrentText();
+            holder.assignment = Optional.of(variableReferenceNode);
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isPresent()) {
+            // TO DO LATER
+        }
+        Optional<BooleanOpNode> bool = BoolExpTerm();
+        if(bool.isPresent()) {
+            holder.expression = bool.get();
+        }
+        else
+            holder.expression = new BooleanOpNode();
+        RequireNewLine();
+        //Statements
+        List<StatementNode> statements = Statements();
+        if(statements.isEmpty()) {
+            throw new SyntaxErrorException("Statement expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        else
+            holder.statements = statements;
+        return Optional.of(holder);
+    }
+    public Optional<VariableReferenceNode> toRefer() throws SyntaxErrorException {
+        VariableReferenceNode holder = new VariableReferenceNode();
+        return Optional.of(holder);
+    }
+
+    public Optional<BooleanOpNode> BoolExpTerm() throws SyntaxErrorException {
+        return Optional.empty();
+    }
 }
