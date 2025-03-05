@@ -213,7 +213,7 @@ public class Parser {
                 continue;
             }
             List<MemberNode> memberNode = members();
-            if(memberNode.isEmpty()) {
+            if(!memberNode.isEmpty()) {
              classNode.members.addAll(memberNode);
              continue;
             }
