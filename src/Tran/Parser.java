@@ -203,25 +203,21 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Class must have a proper indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while((!manageTokens.done() && manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT)) {
-            RequireNewLine();
-            if (manageTokens.done() || manageTokens.getToken().get(0).getType() == Token.TokenTypes.DEDENT)
-                break;
+        while(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty() && !manageTokens.getToken().isEmpty()) {
             Optional<ConstructorNode> constructorNode = constructor();
             if(constructorNode.isPresent()) {
                 classNode.constructors.add(constructorNode.get());
-                continue;
             }
             List<MemberNode> memberNode = members();
             if(!memberNode.isEmpty()) {
              classNode.members.addAll(memberNode);
-             continue;
             }
             Optional<MethodDeclarationNode> md = methodDeclaration();
             if(md.isPresent()) {
                 classNode.methods.add(md.get());
-                continue;
             }
+            else
+                throw new SyntaxErrorException("Class expected a constructor, members, or methods", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) {
             throw new SyntaxErrorException("Class expected an ending dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
