@@ -148,4 +148,15 @@ public class TokenManager {
     public int getTokenSize() {
         return token.size();
     }
+
+    /**
+     * This method takes in a valid index from the list of tokens and returns the corresponding token
+     * type for that token.
+     *
+     * @param i The index in the list of tokens.
+     * @return The token type.
+     */
+    public Token.TokenTypes getSpecificToken(int i) {
+        return  token.get(i).getType();
+    }
 }

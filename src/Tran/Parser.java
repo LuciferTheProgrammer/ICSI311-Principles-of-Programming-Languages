@@ -1,7 +1,8 @@
 package Tran;
 import AST.*;
-import java.util.LinkedList;
+
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -474,10 +475,12 @@ public class Parser {
     }
 
     /**
-     * This method creates a list of statement nodes which checks for the presence
+     * This method creates a list of statement nodes which checks for the presence of an indent,
+     * then statement(s), and finally a dedent. All of these properties are then proceeded to be added
+     * to the list of statement nodes which is then returned.
      *
-     * @return
-     * @throws SyntaxErrorException
+     * @return The list of statement nodes.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public List<StatementNode> Statements() throws SyntaxErrorException {
         List<StatementNode> statements = new ArrayList<>();
@@ -495,6 +498,14 @@ public class Parser {
         }
         return statements;
     }
+
+    /**
+     * This method creates an if statement node or loop statement node which then proceeds to check for
+     * the presence of either one, then proceeds to return that type of statement node.
+     *
+     * @return The statement node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<StatementNode> statement() throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.IF).isPresent()) {
             Optional<IfNode> ifHolder = ifStatement();
@@ -510,6 +521,16 @@ public class Parser {
         }
         return Optional.empty();
     }
+
+    /**
+     * This method creates an if statement node then checks for a boolean op node through BoolExpTerm(),
+     * a new line, and statement(s), along with an (optional) else followed by a branching statement(s).
+     * All of these properties are then proceeded to be added to the if statement node which is then returned.
+     *
+     *
+     * @return The if statement node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<IfNode> ifStatement() throws SyntaxErrorException {
         IfNode holder = new IfNode();
         Optional<BooleanOpNode> bool = BoolExpTerm();
@@ -538,10 +559,19 @@ public class Parser {
         return Optional.of(holder);
     }
 
+    /**
+     * This method creates a loop statement node which then checks for the presence of a variable reference
+     * node (optional), then for an assignment statement ("=") (optional), for a boolean op node through BoolExpTerm(),
+     * a new line, and finally for statement(s). All of these properties are then proceeded to be added to the loop
+     * statement node which is then returned.
+     *
+     * @return The loop statement node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<LoopNode> loopStatement() throws SyntaxErrorException {
         LoopNode holder = new LoopNode();
         if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
-            Optional<VariableReferenceNode> reference = toRefer();
+            Optional<VariableReferenceNode> reference = Expression();
             VariableReferenceNode variableReferenceNode = reference.get();
             variableReferenceNode.name = manageTokens.getCurrentText();
             holder.assignment = Optional.of(variableReferenceNode);
@@ -565,11 +595,21 @@ public class Parser {
         return Optional.of(holder);
     }
 
-    public Optional<VariableReferenceNode> toRefer() {
+    /**
+     * This method creates and returns a variable reference node (temporarily -> to be modified later).
+     *
+     * @return The variable reference node.
+     */
+    public Optional<VariableReferenceNode> Expression() {
         VariableReferenceNode holder = new VariableReferenceNode();
         return Optional.of(holder);
     }
 
+    /**
+     * This method returns an empty boolean op node (temporarily -> to be modified later).
+     *
+     * @return The boolean op node.
+     */
     public Optional<BooleanOpNode> BoolExpTerm() {
         return Optional.empty();
     }
