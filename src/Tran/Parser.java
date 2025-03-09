@@ -194,6 +194,16 @@ public class Parser {
         }
     }
 
+    /**
+     * This method creates a class node, then checks the list of tokens for a presence of the keyword class,
+     * the name, while checking for interfaces that are being implemented (optional), a new line, an indent,
+     * checking for the presence of constructors, methods, and members, and finally for the presence of
+     * a dedent. All of these properties are then proceeded to be added to the class node.
+     * This method also returns a class node.
+     *
+     * @return The class node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<ClassNode> classStatements() throws SyntaxErrorException {
         ClassNode classNode = new ClassNode();
         if((manageTokens.matchAndRemove(Token.TokenTypes.CLASS).isEmpty())) {
@@ -235,6 +245,14 @@ public class Parser {
         return Optional.of(classNode);
     }
 
+    /**
+     * This method takes in a class node and checks for the keyword implements, and finally
+     * the name(s) of the interfaces that are being implemented. All of these properties are then proceeded
+     * to be added to the class node.
+     *
+     * @param sample The class node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public void checkForInterfaces(ClassNode sample) throws SyntaxErrorException {
         if((manageTokens.matchAndRemove(Token.TokenTypes.IMPLEMENTS).isEmpty())) {
             return;
@@ -252,6 +270,15 @@ public class Parser {
         }
     }
 
+    /**
+     * This method creates a constructor node, then proceeds to check for the presence of the keyword construct,
+     * a left parentheses, parameter variable declarations (optional), a right parentheses, a new line, and
+     * a method body. All of these properties are then proceeded to be added to the constructor node. Finally,
+     * this method also returns the constructor node.
+     *
+     * @return The constructor node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<ConstructorNode> constructor() throws SyntaxErrorException {
         ConstructorNode constructorNode = new ConstructorNode();
         if((manageTokens.matchAndRemove(Token.TokenTypes.CONSTRUCT).isEmpty())) {
@@ -269,6 +296,13 @@ public class Parser {
         return Optional.of(constructorNode);
     }
 
+    /**
+     * This method takes in a constructor node which checks for the presence of parameter variable declarations.
+     * All of these properties are then proceeded to be added to the constructor node.
+     *
+     * @param sample The constructor node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public void checkParameterConstructor(ConstructorNode sample) throws SyntaxErrorException {
         Optional<VariableDeclarationNode> holder = variableDeclarations();
         if(holder.isPresent()) {
@@ -283,6 +317,16 @@ public class Parser {
             }
         }
     }
+
+    /**
+     * This method creates a method declaration node that checks for the keywords shared or private as
+     * potential access specifiers (optional), then a method header, and then for a method body. All
+     * of these properties are then proceeded to be added to the method declaration node. This method
+     * also returns a method declaration node.
+     *
+     * @return The method declaration node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<MethodDeclarationNode> methodDeclaration() throws SyntaxErrorException {
         MethodDeclarationNode methodDeclarationNode = new MethodDeclarationNode();
         if(manageTokens.matchAndRemove(Token.TokenTypes.SHARED).isPresent()) {
@@ -301,6 +345,15 @@ public class Parser {
         methodBodyMD(methodDeclarationNode);
         return Optional.of(methodDeclarationNode);
     }
+
+    /**
+     * This method creates a list of member nodes which checks for the presence of variable declarations.
+     * Which are then proceeded to be added to the list of member nodes. This method also returns the list
+     * of member nodes.
+     *
+     * @return The list of member nodes.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public List<MemberNode> members() throws SyntaxErrorException {
         List<MemberNode> memberNodes = new ArrayList<>();
         List<VariableDeclarationNode> holder = multipleVariableDeclarations();
@@ -314,6 +367,16 @@ public class Parser {
         }
         return memberNodes;
     }
+
+    /**
+     * This method creates a list of variable declaration nodes which checks for the presence of the variable type,
+     * then the variable name, then all the subsequent variable names that come after (optional), and finally
+     * a new line. All of these properties are then proceeded to be added to the list of variable declaration nodes
+     * This method also returns the list of variable declaration nodes.
+     *
+     * @return The list of variable declaration nodes.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public List<VariableDeclarationNode> multipleVariableDeclarations() throws SyntaxErrorException {
         List<VariableDeclarationNode> multivariable = new ArrayList<>();
         if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty())
@@ -334,6 +397,16 @@ public class Parser {
         RequireNewLine();
         return multivariable;
     }
+
+    /**
+     * This method takes in a variable declaration node which then proceeds to check for the presence of the
+     * variable name. This property is then proceeded to be added to the variable declaration node. Then
+     * this method returns the variable declaration node.
+     *
+     * @param sample The variable declaration node.
+     * @return The variable declaration node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<VariableDeclarationNode> VariableNameValue(VariableDeclarationNode sample) throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
             throw new SyntaxErrorException("Expected to have a variable name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -341,6 +414,15 @@ public class Parser {
         sample.name = manageTokens.getCurrentText();
         return Optional.of(sample);
     }
+
+    /**
+     * This method takes in a constructor node which then checks for the presence of an indent, local
+     * variables, statements, and finally a dedent. All of these properties are then proceeded to be added
+     * to the constructor node which is then returned.
+     *
+     * @param sample The constructor node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public void methodBodyConstructor(ConstructorNode sample) throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -362,6 +444,14 @@ public class Parser {
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
     }
 
+    /**
+     * This method takes in a method declaration node which then checks for the presence of an indent, local
+     * variables, statements, and finally a dedent. All of these properties are then proceeded to be added
+     * to the method declaration node which is then returned.
+     *
+     * @param sample The method declaration node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public void methodBodyMD(MethodDeclarationNode sample) throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -383,6 +473,12 @@ public class Parser {
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
     }
 
+    /**
+     * This method creates a list of statement nodes which checks for the presence
+     *
+     * @return
+     * @throws SyntaxErrorException
+     */
     public List<StatementNode> Statements() throws SyntaxErrorException {
         List<StatementNode> statements = new ArrayList<>();
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
@@ -469,12 +565,12 @@ public class Parser {
         return Optional.of(holder);
     }
 
-    public Optional<VariableReferenceNode> toRefer() throws SyntaxErrorException {
+    public Optional<VariableReferenceNode> toRefer() {
         VariableReferenceNode holder = new VariableReferenceNode();
         return Optional.of(holder);
     }
 
-    public Optional<BooleanOpNode> BoolExpTerm() throws SyntaxErrorException {
+    public Optional<BooleanOpNode> BoolExpTerm() {
         return Optional.empty();
     }
 }
