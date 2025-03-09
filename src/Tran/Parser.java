@@ -36,9 +36,8 @@ public class Parser {
      * @throws SyntaxErrorException When no new line token is present after the method header.
      */
     public void RequireNewLine() throws SyntaxErrorException {
-        List<Token> holder = manageTokens.getToken();
         if((manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE).isEmpty())) {
-            if((!manageTokens.done())&& (holder.get(0).getType() == Token.TokenTypes.DEDENT))
+            if((!manageTokens.done())&& (manageTokens.getSpecificToken(0) == Token.TokenTypes.DEDENT))
                 return;
             throw new SyntaxErrorException("Expected a newline", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
@@ -53,7 +52,7 @@ public class Parser {
      */
     public void Tran() throws SyntaxErrorException {
         while(!manageTokens.done()) {
-            if(manageTokens.getToken().get(0).getType() == Token.TokenTypes.NEWLINE) {
+            if(manageTokens.getSpecificToken(0)== Token.TokenTypes.NEWLINE) {
                 manageTokens.matchAndRemove(Token.TokenTypes.NEWLINE);
             }
             Optional<InterfaceNode> holder = interfaceStatement();
@@ -89,7 +88,7 @@ public class Parser {
         RequireNewLine();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()))
             throw new SyntaxErrorException("Interface must have an indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
-        while((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty()) && !(manageTokens.getToken().isEmpty())) {
+        while((manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) && !(manageTokens.getToken().isEmpty())) {
             Optional<MethodHeaderNode> test = methodHeaders();
             if ((test.isEmpty())) {
                 throw new SyntaxErrorException("Interface must have method with a name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -98,6 +97,9 @@ public class Parser {
                 MethodHeaderNode method = test.get();
                 node.methods.add(method);
             }
+        }
+        if((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())) {
+            throw new SyntaxErrorException("Interface expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         return Optional.of(node);
     }
@@ -219,14 +221,14 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Class must have a proper indentation", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty() && !manageTokens.getToken().isEmpty()) {
+        while((manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) && !(manageTokens.getToken().isEmpty())) {
             Optional<ConstructorNode> constructorNode = constructor();
             if(constructorNode.isPresent()) {
                 classNode.constructors.add(constructorNode.get());
                 continue;
             }
-            if(manageTokens.getToken().get(0).getType() == Token.TokenTypes.WORD) {
-                if (manageTokens.getTokenSize() > 1 && manageTokens.getToken().get(1).getType() == Token.TokenTypes.LPAREN) {
+            if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+                if ((manageTokens.getTokenSize() > 1) && (manageTokens.getSpecificToken(1) == Token.TokenTypes.LPAREN)) {
                     Optional<MethodDeclarationNode> md = methodDeclaration();
                     if (md.isPresent()) {
                         classNode.methods.add(md.get());
@@ -242,6 +244,9 @@ public class Parser {
                 }
             }
             throw new SyntaxErrorException("Class expected a constructor, member, or method", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        if((manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())) {
+            throw new SyntaxErrorException("Class expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         return Optional.of(classNode);
     }
@@ -428,7 +433,7 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+        while(manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
             List<VariableDeclarationNode> list = multipleVariableDeclarations();
             if(!list.isEmpty()) {
                 sample.locals.addAll(list);
@@ -457,7 +462,7 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+        while(manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
             List<VariableDeclarationNode> list = multipleVariableDeclarations();
             if(!list.isEmpty()) {
                 sample.locals.addAll(list);
@@ -487,7 +492,7 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
             throw new SyntaxErrorException("Indent Expected on statements", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        while(manageTokens.getToken().get(0).getType() != Token.TokenTypes.DEDENT) {
+        while(manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
             Optional<StatementNode> statement = statement();
             if(statement.isPresent()) {
                 statements.add(statement.get());
