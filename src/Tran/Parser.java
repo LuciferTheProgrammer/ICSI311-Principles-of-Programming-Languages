@@ -605,9 +605,9 @@ public class Parser {
      *
      * @return The variable reference node.
      */
-    public Optional<VariableReferenceNode> Expression() {
-        VariableReferenceNode holder = new VariableReferenceNode();
-        return Optional.of(holder);
+    public Optional<VariableReferenceNode> Expression() throws SyntaxErrorException {
+        VariableReferenceNode reference = VariableReference();
+        return Optional.of(reference);
     }
 
     /**
@@ -615,7 +615,65 @@ public class Parser {
      *
      * @return The boolean op node.
      */
-    public Optional<BooleanOpNode> BoolExpTerm() {
+    public Optional<BooleanOpNode> BoolExpTerm() throws SyntaxErrorException {
+        BooleanOpNode holder = new BooleanOpNode();
+        Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
+        if(methodCallExpressionNode.isPresent()) {
+            //return Optional.empty();
+            // TO DO
+        }
+        Optional<VariableReferenceNode> expression1 = Expression();
+        if(expression1.isPresent()) {
+            holder.left = expression1.get();
+            if(manageTokens.matchAndRemove(Token.TokenTypes.EQUAL).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.NOTEQUAL).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.LESSTHANEQUAL).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHANEQUAL).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHAN).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.LESSTHAN).isPresent()) {
+                Optional<VariableReferenceNode> expression2 = Expression();
+                holder.right = expression2.get();
+                return Optional.of(holder);
+            }
+        }
+        VariableReferenceNode take = VariableReference();
+        if(take.name != null) {
+            holder.left = take;
+            return Optional.of(holder);
+        }
         return Optional.empty();
+    }
+
+    public Optional<MethodCallExpressionNode> MethodCallExpression() {
+        return Optional.empty();
+    }
+
+    public VariableReferenceNode VariableReference() throws SyntaxErrorException {
+        VariableReferenceNode holder = new VariableReferenceNode();
+        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
+            throw new SyntaxErrorException("Variable reference expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        holder.name = manageTokens.getCurrentText();
+        return holder;
     }
 }
