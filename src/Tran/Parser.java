@@ -1,6 +1,7 @@
 package Tran;
 import AST.*;
 
+import java.beans.Expression;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -538,7 +539,7 @@ public class Parser {
      */
     public Optional<IfNode> ifStatement() throws SyntaxErrorException {
         IfNode holder = new IfNode();
-        Optional<BooleanOpNode> bool = BoolExpTerm();
+        Optional<ExpressionNode> bool = BoolExpTerm();
         if(bool.isPresent()) {
             holder.condition = bool.get();
         }
@@ -584,7 +585,7 @@ public class Parser {
         if(manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isPresent()) {
             // TO DO LATER
         }
-        Optional<BooleanOpNode> bool = BoolExpTerm();
+        Optional<ExpressionNode> bool = BoolExpTerm();
         if(bool.isPresent()) {
             holder.expression = bool.get();
         }
@@ -615,8 +616,9 @@ public class Parser {
      *
      * @return The boolean op node.
      */
-    public Optional<BooleanOpNode> BoolExpTerm() throws SyntaxErrorException {
-        BooleanOpNode holder = new BooleanOpNode();
+    public Optional<ExpressionNode> BoolExpTerm() throws SyntaxErrorException {
+        BooleanOpNode boolOp = new BooleanOpNode();
+        CompareNode holder = new CompareNode();
         Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
         if(methodCallExpressionNode.isPresent()) {
             //return Optional.empty();
@@ -625,41 +627,97 @@ public class Parser {
         Optional<VariableReferenceNode> expression1 = Expression();
         if(expression1.isPresent()) {
             holder.left = expression1.get();
-            if(manageTokens.matchAndRemove(Token.TokenTypes.EQUAL).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
+            if(manageTokens.getSpecificToken(0) == Token.TokenTypes.EQUAL) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            else if(manageTokens.getSpecificToken(0) == Token.TokenTypes.NOTEQUAL) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            else if(manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHANEQUAL) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            else if(manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHANEQUAL) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            else if(manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHAN) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            else if(manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHAN) {
+                Token.TokenTypes container = manageTokens.getSpecificToken(0);
+                BoolExpFactor(holder, container);
+            }
+            Optional<VariableReferenceNode> expression2 = Expression();
+            if(expression2.isPresent()) {
                 holder.right = expression2.get();
                 return Optional.of(holder);
             }
-            else if(manageTokens.matchAndRemove(Token.TokenTypes.NOTEQUAL).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
-                holder.right = expression2.get();
-                return Optional.of(holder);
-            }
-            else if(manageTokens.matchAndRemove(Token.TokenTypes.LESSTHANEQUAL).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
-                holder.right = expression2.get();
-                return Optional.of(holder);
-            }
-            else if(manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHANEQUAL).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
-                holder.right = expression2.get();
-                return Optional.of(holder);
-            }
-            else if(manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHAN).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
-                holder.right = expression2.get();
-                return Optional.of(holder);
-            }
-            else if(manageTokens.matchAndRemove(Token.TokenTypes.LESSTHAN).isPresent()) {
-                Optional<VariableReferenceNode> expression2 = Expression();
-                holder.right = expression2.get();
-                return Optional.of(holder);
-            }
+            else
+                throw new SyntaxErrorException("Expected a right side expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         VariableReferenceNode take = VariableReference();
         if(take.name != null) {
             holder.left = take;
             return Optional.of(holder);
+        }
+        return Optional.empty();
+    }
+    public  void BoolExpFactor(CompareNode sample, Token.TokenTypes operator) throws SyntaxErrorException {
+        switch(operator) {
+            case EQUAL -> {sample.op = CompareNode.CompareOperations.eq;
+                manageTokens.matchAndRemove(Token.TokenTypes.EQUAL);}
+            case NOTEQUAL -> {sample.op = CompareNode.CompareOperations.ne;
+                manageTokens.matchAndRemove(Token.TokenTypes.NOTEQUAL);}
+            case LESSTHANEQUAL -> {sample.op = CompareNode.CompareOperations.le;
+                manageTokens.matchAndRemove(Token.TokenTypes.LESSTHANEQUAL);}
+            case GREATERTHANEQUAL -> {sample.op = CompareNode.CompareOperations.ge;
+                manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHANEQUAL);}
+            case GREATERTHAN -> {sample.op = CompareNode.CompareOperations.gt;
+                manageTokens.matchAndRemove(Token.TokenTypes.GREATERTHAN);}
+            case LESSTHAN -> {sample.op = CompareNode.CompareOperations.lt;
+                manageTokens.matchAndRemove(Token.TokenTypes.LESSTHAN);}
+            }
+    }
+
+    public void MethodCall() throws SyntaxErrorException {
+        if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+            VariableReferenceNode reference = VariableReference();
+            while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
+                if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+                    VariableReferenceNode variableReferenceNode = VariableReference();
+                }
+                else
+                    throw new SyntaxErrorException("Expected a variable reference name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
+                throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+        }
+        Optional<MethodCallExpressionNode> holder = MethodCallExpression();
+        if(holder.isPresent()) {
+            //TO DO
+        }
+        RequireNewLine();
+    }
+
+    public Optional<AssignmentNode> Assignment() throws SyntaxErrorException {
+        AssignmentNode assignment = new AssignmentNode();
+        if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+            assignment.target = VariableReference();
+            if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
+                throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            Optional<VariableReferenceNode> expressionContainer = Expression();
+            if (expressionContainer.isEmpty()) {
+                throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            assignment.expression = expressionContainer.get();
+            RequireNewLine();
+            return Optional.of(assignment);
         }
         return Optional.empty();
     }
