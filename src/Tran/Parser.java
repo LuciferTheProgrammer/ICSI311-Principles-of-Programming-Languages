@@ -679,24 +679,25 @@ public class Parser {
     }
 
     public Optional<MethodCallStatementNode> MethodCall() throws SyntaxErrorException {
-        MethodCallStatementNode methodCall = new MethodCallStatementNode();
+        MethodCallStatementNode methodCall;
+        List<VariableReferenceNode> references = new ArrayList<>();
         if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
             VariableReferenceNode reference = VariableReference();
-            methodCall.returnValues.add(reference);
+            references.add(reference);
             while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
                 if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
                     VariableReferenceNode variableReferenceNode = VariableReference();
-                    methodCall.returnValues.add(variableReferenceNode);
+                    references.add(variableReferenceNode);
                 } else
                     throw new SyntaxErrorException("Expected a variable reference name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
                 throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
-        Optional<MethodCallExpressionNode> holder = MethodCallExpression();
-        if (holder.isPresent()) {
-            //TO DO
-        }
+            Optional<MethodCallExpressionNode> holder = MethodCallExpression();
+            MethodCallExpressionNode container = holder.get();
+            methodCall = new MethodCallStatementNode(container);
+            methodCall.returnValues.addAll(references);
         RequireNewLine();
         return Optional.of(methodCall);
     }
