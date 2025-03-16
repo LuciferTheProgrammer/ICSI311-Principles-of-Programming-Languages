@@ -722,6 +722,9 @@ public class Parser {
         return Optional.empty();
     }
 
+    public Optional<StatementNode> disambiguate() throws SyntaxErrorException {
+        return Optional.empty();
+    }
     public Optional<MethodCallExpressionNode> MethodCallExpression() {
         return Optional.empty();
     }
