@@ -1,7 +1,5 @@
 package Tran;
 import AST.*;
-
-import java.beans.Expression;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -457,10 +455,12 @@ public class Parser {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         while (manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
-            List<VariableDeclarationNode> list = multipleVariableDeclarations();
-            if (!list.isEmpty()) {
-                sample.locals.addAll(list);
-                continue;
+            if(manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.WORD)) {
+                List<VariableDeclarationNode> list = multipleVariableDeclarations();
+                if (!list.isEmpty()) {
+                    sample.locals.addAll(list);
+                    continue;
+                }
             }
             Optional<StatementNode> collector = statement();
             if (collector.isPresent()) {
@@ -512,10 +512,16 @@ public class Parser {
                 return Optional.of(ifHolder.get());
             }
         }
-        if (manageTokens.matchAndRemove(Token.TokenTypes.LOOP).isPresent()) {
+        else if (manageTokens.matchAndRemove(Token.TokenTypes.LOOP).isPresent()) {
             Optional<LoopNode> loopHolder = loopStatement();
             if (loopHolder.isPresent()) {
                 return Optional.of(loopHolder.get());
+            }
+        }
+        else {
+            Optional<StatementNode> toHold = disambiguate();
+            if(toHold.isPresent()) {
+                return Optional.of(toHold.get());
             }
         }
         return Optional.empty();
@@ -566,14 +572,12 @@ public class Parser {
      */
     public Optional<LoopNode> loopStatement() throws SyntaxErrorException {
         LoopNode holder = new LoopNode();
-        if (manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+        if (manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.ASSIGN)) {
             Optional<VariableReferenceNode> reference = Expression();
             VariableReferenceNode variableReferenceNode = reference.get();
             variableReferenceNode.name = manageTokens.getCurrentText();
             holder.assignment = Optional.of(variableReferenceNode);
-        }
-        if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isPresent()) {
-            // TO DO LATER
+            manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN);
         }
         Optional<ExpressionNode> bool = BoolExpTerm();
         if (bool.isPresent()) {
@@ -609,7 +613,6 @@ public class Parser {
         CompareNode holder = new CompareNode();
         Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
         if (methodCallExpressionNode.isPresent()) {
-            //return Optional.empty();
             // TO DO
         }
         Optional<VariableReferenceNode> expression1 = Expression();
@@ -678,7 +681,7 @@ public class Parser {
         }
     }
 
-    public Optional<MethodCallStatementNode> MethodCall() throws SyntaxErrorException {
+    public Optional<MethodCallStatementNode> MethodCall(Optional<MethodCallExpressionNode> holder) throws SyntaxErrorException {
         MethodCallStatementNode methodCall;
         List<VariableReferenceNode> references = new ArrayList<>();
         if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
@@ -694,15 +697,13 @@ public class Parser {
             if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
                 throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
-            Optional<MethodCallExpressionNode> holder = MethodCallExpression();
-            MethodCallExpressionNode container = holder.get();
-            methodCall = new MethodCallStatementNode(container);
-            methodCall.returnValues.addAll(references);
+        }
+        MethodCallExpressionNode container = holder.get();
+        methodCall = new MethodCallStatementNode(container);
+        methodCall.returnValues.addAll(references);
         RequireNewLine();
         return Optional.of(methodCall);
     }
-    return Optional.empty();
-}
 
     public Optional<AssignmentNode> Assignment() throws SyntaxErrorException {
         AssignmentNode assignment = new AssignmentNode();
@@ -723,7 +724,29 @@ public class Parser {
     }
 
     public Optional<StatementNode> disambiguate() throws SyntaxErrorException {
-        return Optional.empty();
+        Optional<MethodCallExpressionNode> methodCallExpression = MethodCallExpression();
+        if(methodCallExpression.isPresent()) {
+            Optional<MethodCallStatementNode> placement = MethodCall(methodCallExpression);
+            MethodCallStatementNode container = placement.get();
+            return Optional.of(container);
+        }
+        if(manageTokens.getSpecificToken(0) != Token.TokenTypes.WORD) {
+            return Optional.empty();
+        }
+        else {
+            Optional<Token> token = manageTokens.peek(1);
+            Token take = token.get();
+            if(take.getType() == Token.TokenTypes.COMMA) {
+                Optional<MethodCallStatementNode> mst = MethodCall(methodCallExpression);
+                MethodCallStatementNode container = mst.get();
+                return Optional.of(container);
+            }
+            else {
+                Optional<AssignmentNode> assignment = Assignment();
+                AssignmentNode taken = assignment.get();
+                return Optional.of(taken);
+            }
+        }
     }
     public Optional<MethodCallExpressionNode> MethodCallExpression() {
         return Optional.empty();
