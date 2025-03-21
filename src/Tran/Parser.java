@@ -646,8 +646,7 @@ public class Parser {
         }
         VariableReferenceNode take = VariableReference();
         if (take.name != null) {
-            holder.left = take;
-            return Optional.of(holder);
+            return Optional.of(take);
         }
         return Optional.empty();
     }
