@@ -613,7 +613,8 @@ public class Parser {
         CompareNode holder = new CompareNode();
         Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
         if (methodCallExpressionNode.isPresent()) {
-            // TO DO
+            MethodCallExpressionNode methodCallExpression = methodCallExpressionNode.get();
+            return Optional.of(methodCallExpression);
         }
         Optional<VariableReferenceNode> expression1 = Expression();
         if (expression1.isPresent()) {
@@ -651,7 +652,7 @@ public class Parser {
         return Optional.empty();
     }
 
-    public void BoolExpFactor(CompareNode sample, Token.TokenTypes operator) throws SyntaxErrorException {
+    public void BoolExpFactor(CompareNode sample, Token.TokenTypes operator) {
         switch (operator) {
             case EQUAL -> {
                 sample.op = CompareNode.CompareOperations.eq;
