@@ -696,16 +696,15 @@ public class Parser {
     }
 
     /**
-     * This method takes in a Method Call Expression Node which passes it as a parameter to a constructor to
+     * This method creates a Method Call Expression Node which passes it as a parameter to a constructor to
      * create a Method Call Statement Node. Then, keeps a list of Variable Reference Nodes which are then added
      * to the properties of the Method Call Statement Node (return values) at the end while also consuming a NEW LINE
      * token. Finally, the Method Call Statement Node is returned.
      *
-     * @param holder The Method Call Expression Node.
      * @return The Method Call Statement Node.
      * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
-    public Optional<MethodCallStatementNode> MethodCall(Optional<MethodCallExpressionNode> holder) throws SyntaxErrorException {
+    public Optional<MethodCallStatementNode> MethodCall() throws SyntaxErrorException {
         MethodCallStatementNode methodCall;
         List<VariableReferenceNode> references = new ArrayList<>();
         if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
@@ -723,6 +722,7 @@ public class Parser {
                 throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
         }
+        Optional<MethodCallExpressionNode> holder = MethodCallExpression();
         MethodCallExpressionNode container = holder.get();
         methodCall = new MethodCallStatementNode(container);
         methodCall.returnValues.addAll(references);
@@ -772,9 +772,9 @@ public class Parser {
     public Optional<StatementNode> disambiguate() throws SyntaxErrorException {
         Optional<MethodCallExpressionNode> methodCallExpression = MethodCallExpression();
         if(methodCallExpression.isPresent()) {
-            Optional<MethodCallStatementNode> placement = MethodCall(methodCallExpression);
-            MethodCallStatementNode container = placement.get();
-            return Optional.of(container);
+            MethodCallStatementNode mcs = new MethodCallStatementNode(methodCallExpression.get());
+            RequireNewLine();
+            return Optional.of(mcs);
         }
         if(manageTokens.getSpecificToken(0) != Token.TokenTypes.WORD) {
             return Optional.empty();
@@ -783,8 +783,7 @@ public class Parser {
             Optional<Token> token = manageTokens.peek(1);
             Token take = token.get();
             if(take.getType() == Token.TokenTypes.COMMA) {
-                Optional<MethodCallExpressionNode> mce = MethodCallExpression();
-                Optional<MethodCallStatementNode> mst = MethodCall(mce);
+                Optional<MethodCallStatementNode> mst = MethodCall();
                 MethodCallStatementNode contained = mst.get();
                 return Optional.of(contained);
             }
