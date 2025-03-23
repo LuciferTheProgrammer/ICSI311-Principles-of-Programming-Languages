@@ -499,10 +499,10 @@ public class Parser {
     }
 
     /**
-     * This method creates an if statement node or loop statement node which then proceeds to check for
-     * the presence of either one, then proceeds to return that type of statement node.
+     * This method checks for the presence of either an if statement or a loop statement. If both are not
+     * present then the Statement Node generated and returned from the disambiguate method will be returned.
      *
-     * @return The statement node.
+     * @return The Statement Node.
      * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<StatementNode> statement() throws SyntaxErrorException {
@@ -521,7 +521,7 @@ public class Parser {
         else {
             Optional<StatementNode> toHold = disambiguate();
             if(toHold.isPresent()) {
-                return Optional.of(toHold.get());
+                return toHold;
             }
         }
         return Optional.empty();
@@ -573,10 +573,7 @@ public class Parser {
     public Optional<LoopNode> loopStatement() throws SyntaxErrorException {
         LoopNode holder = new LoopNode();
         if (manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.ASSIGN)) {
-            Optional<VariableReferenceNode> reference = Expression();
-            VariableReferenceNode variableReferenceNode = reference.get();
-            variableReferenceNode.name = manageTokens.getCurrentText();
-            holder.assignment = Optional.of(variableReferenceNode);
+            holder.assignment = Expression();
             manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN);
         }
         Optional<ExpressionNode> bool = BoolExpTerm();
@@ -594,23 +591,24 @@ public class Parser {
     }
 
     /**
-     * This method creates and returns a variable reference node (temporarily -> to be modified later).
+     * This method creates and returns a Variable Reference Node (temporarily -> to be modified later).
      *
-     * @return The variable reference node.
+     * @return The Variable Reference Node.
      */
-    public Optional<VariableReferenceNode> Expression() throws SyntaxErrorException {
-        VariableReferenceNode reference = VariableReference();
-        return Optional.of(reference);
+    public Optional<VariableReferenceNode> Expression() {
+        Optional<VariableReferenceNode> taker = VariableReference();
+        return taker;
     }
 
     /**
-     * This method returns an empty boolean op node (temporarily -> to be modified later).
+     * This method either returns a Method Call Expression Node, Compare Node, or Variable Reference Node.
+     * If none of these options are present then the method returns empty.
      *
-     * @return The boolean op node.
+     * @return The instance of a class that implements the Expression Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<ExpressionNode> BoolExpTerm() throws SyntaxErrorException {
         BooleanOpNode boolOp = new BooleanOpNode();
-        CompareNode holder = new CompareNode();
         Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
         if (methodCallExpressionNode.isPresent()) {
             MethodCallExpressionNode methodCallExpression = methodCallExpressionNode.get();
@@ -618,23 +616,29 @@ public class Parser {
         }
         Optional<VariableReferenceNode> expression1 = Expression();
         if (expression1.isPresent()) {
+            CompareNode holder = new CompareNode();
             holder.left = expression1.get();
             if (manageTokens.getSpecificToken(0) == Token.TokenTypes.EQUAL) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
-            } else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.NOTEQUAL) {
+            }
+            else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.NOTEQUAL) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
-            } else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHANEQUAL) {
+            }
+            else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHANEQUAL) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
-            } else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHANEQUAL) {
+            }
+            else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHANEQUAL) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
-            } else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHAN) {
+            }
+            else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.GREATERTHAN) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
-            } else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHAN) {
+            }
+            else if (manageTokens.getSpecificToken(0) == Token.TokenTypes.LESSTHAN) {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
             }
@@ -642,16 +646,26 @@ public class Parser {
             if (expression2.isPresent()) {
                 holder.right = expression2.get();
                 return Optional.of(holder);
-            } else
+            }
+            else
                 throw new SyntaxErrorException("Expected a right side expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
-        VariableReferenceNode take = VariableReference();
-        if (take.name != null) {
-            return Optional.of(take);
+        Optional<VariableReferenceNode> take = VariableReference();
+        if (take.isPresent()) {
+            VariableReferenceNode variableReferenceNode = take.get();
+            return Optional.of(variableReferenceNode);
         }
         return Optional.empty();
     }
 
+    /**
+     * This method takes in a Compare Node and a Token Type. Then, based on the Token Type,
+     * the method sets the CompareOperations instance field of the Compare Node
+     * to the corresponding/matching enum data type regarding the type of comparison operator used.
+     *
+     * @param sample The Compare Node.
+     * @param operator The Token Type.
+     */
     public void BoolExpFactor(CompareNode sample, Token.TokenTypes operator) {
         switch (operator) {
             case EQUAL -> {
@@ -681,17 +695,28 @@ public class Parser {
         }
     }
 
+    /**
+     * This method takes in a Method Call Expression Node which passes it as a parameter to a constructor to
+     * create a Method Call Statement Node. Then, keeps a list of Variable Reference Nodes which are then added
+     * to the properties of the Method Call Statement Node (return values) at the end while also consuming a NEW LINE
+     * token. Finally, the Method Call Statement Node is returned.
+     *
+     * @param holder The Method Call Expression Node.
+     * @return The Method Call Statement Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<MethodCallStatementNode> MethodCall(Optional<MethodCallExpressionNode> holder) throws SyntaxErrorException {
         MethodCallStatementNode methodCall;
         List<VariableReferenceNode> references = new ArrayList<>();
         if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
-            VariableReferenceNode reference = VariableReference();
-            references.add(reference);
+            Optional<VariableReferenceNode> reference = VariableReference();
+            references.add(reference.get());
             while (manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
                 if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
-                    VariableReferenceNode variableReferenceNode = VariableReference();
-                    references.add(variableReferenceNode);
-                } else
+                    Optional<VariableReferenceNode> variableReference = VariableReference();
+                    references.add(variableReference.get());
+                }
+                else
                     throw new SyntaxErrorException("Expected a variable reference name", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
@@ -705,10 +730,20 @@ public class Parser {
         return Optional.of(methodCall);
     }
 
+    /**
+     * This method creates an Assignment Node which takes in a Variable Reference Node while consuming
+     * an ASSIGN token ("=") and then takes in an Expression. Finally, it then consumes a NEW LINE token and
+     * returns the Assignment Node. If there is no Variable Reference Node from the start,
+     * then it returns empty.
+     *
+     * @return The Assignment Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<AssignmentNode> Assignment() throws SyntaxErrorException {
         AssignmentNode assignment = new AssignmentNode();
         if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
-            assignment.target = VariableReference();
+            Optional<VariableReferenceNode> taker = VariableReference();
+            assignment.target = taker.get();
             if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
                 throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
@@ -723,6 +758,17 @@ public class Parser {
         return Optional.empty();
     }
 
+    /**
+     * This method calls for a Method Call Expression Node. If it's present, then it creates a Method
+     * Call Statement Node from it and that is returned. If that case is not true, then a Variable Reference
+     * Node is checked, if there is no corresponding value then the method returns empty. However, if a Variable
+     * Reference Node is present then it checks for the case of Method Call, which again generates and returns
+     * a Method Call Statement Node when there is a COMMA token that follows the Variable Reference Node and
+     * if not then it generates and returns an Assignment Node instead.
+     *
+     * @return The Statement Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<StatementNode> disambiguate() throws SyntaxErrorException {
         Optional<MethodCallExpressionNode> methodCallExpression = MethodCallExpression();
         if(methodCallExpression.isPresent()) {
@@ -737,9 +783,10 @@ public class Parser {
             Optional<Token> token = manageTokens.peek(1);
             Token take = token.get();
             if(take.getType() == Token.TokenTypes.COMMA) {
-                Optional<MethodCallStatementNode> mst = MethodCall(methodCallExpression);
-                MethodCallStatementNode container = mst.get();
-                return Optional.of(container);
+                Optional<MethodCallExpressionNode> mce = MethodCallExpression();
+                Optional<MethodCallStatementNode> mst = MethodCall(mce);
+                MethodCallStatementNode contained = mst.get();
+                return Optional.of(contained);
             }
             else {
                 Optional<AssignmentNode> assignment = Assignment();
@@ -748,16 +795,31 @@ public class Parser {
             }
         }
     }
+
+    /**
+     * This method generates and returns a Method Call Expression Node.
+     * (To be modified later, currently returns empty).
+     *
+     * @return The Method Call Expression Node.
+     */
     public Optional<MethodCallExpressionNode> MethodCallExpression() {
         return Optional.empty();
     }
 
-    public VariableReferenceNode VariableReference() throws SyntaxErrorException {
+    /**
+     * This method creates a Variable Reference Node, then checks for the presence of a WORD token.
+     * If there is a WORD token present then the value of the token is set to the property of the Variable
+     * Reference Node (name field), and the Variable Reference Node is returned. Otherwise, it returns
+     * empty.
+     *
+     * @return The Variable Reference Node.
+     */
+    public Optional<VariableReferenceNode> VariableReference() {
         VariableReferenceNode holder = new VariableReferenceNode();
-        if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
-            throw new SyntaxErrorException("Variable reference expected", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        if (manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
+            holder.name = manageTokens.getCurrentText();
+            return Optional.of(holder);
         }
-        holder.name = manageTokens.getCurrentText();
-        return holder;
+        return Optional.empty();
     }
 }
