@@ -426,10 +426,12 @@ public class Parser {
             throw new SyntaxErrorException("Method body expected an indent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         while (manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
-            List<VariableDeclarationNode> list = multipleVariableDeclarations();
-            if (!list.isEmpty()) {
-                sample.locals.addAll(list);
-                continue;
+            if(manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.WORD)) {
+                List<VariableDeclarationNode> list = multipleVariableDeclarations();
+                if (!list.isEmpty()) {
+                    sample.locals.addAll(list);
+                    continue;
+                }
             }
             Optional<StatementNode> collector = statement();
             if (collector.isPresent()) {
