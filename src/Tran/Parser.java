@@ -575,7 +575,7 @@ public class Parser {
     public Optional<LoopNode> loopStatement() throws SyntaxErrorException {
         LoopNode holder = new LoopNode();
         if (manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.ASSIGN)) {
-            holder.assignment = Expression();
+            holder.assignment = VariableReference();
             manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN);
         }
         Optional<ExpressionNode> bool = BoolExpTerm();
@@ -597,9 +597,8 @@ public class Parser {
      *
      * @return The Variable Reference Node.
      */
-    public Optional<VariableReferenceNode> Expression() {
-        Optional<VariableReferenceNode> taker = VariableReference();
-        return taker;
+    public Optional<ExpressionNode> Expression() {
+        return Optional.empty();
     }
 
     /**
@@ -616,7 +615,7 @@ public class Parser {
             MethodCallExpressionNode methodCallExpression = methodCallExpressionNode.get();
             return Optional.of(methodCallExpression);
         }
-        Optional<VariableReferenceNode> expression1 = Expression();
+        Optional<ExpressionNode> expression1 = Expression();
         if (expression1.isPresent()) {
             CompareNode holder = new CompareNode();
             holder.left = expression1.get();
@@ -644,7 +643,7 @@ public class Parser {
                 Token.TokenTypes container = manageTokens.getSpecificToken(0);
                 BoolExpFactor(holder, container);
             }
-            Optional<VariableReferenceNode> expression2 = Expression();
+            Optional<ExpressionNode> expression2 = Expression();
             if (expression2.isPresent()) {
                 holder.right = expression2.get();
                 return Optional.of(holder);
@@ -749,7 +748,7 @@ public class Parser {
             if (manageTokens.matchAndRemove(Token.TokenTypes.ASSIGN).isEmpty()) {
                 throw new SyntaxErrorException("Expected an assignment statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
-            Optional<VariableReferenceNode> expressionContainer = Expression();
+            Optional<ExpressionNode> expressionContainer = Expression();
             if (expressionContainer.isEmpty()) {
                 throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
@@ -820,6 +819,106 @@ public class Parser {
         if (manageTokens.matchAndRemove(Token.TokenTypes.WORD).isPresent()) {
             holder.name = manageTokens.getCurrentText();
             return Optional.of(holder);
+        }
+        return Optional.empty();
+    }
+
+    public Optional<ExpressionNode> Term() throws SyntaxErrorException {
+        Optional<ExpressionNode> factorHolder = Factor();
+        if (factorHolder.isPresent()) {
+            while(manageTokens.getSpecificToken(0) == Token.TokenTypes.TIMES || manageTokens.getSpecificToken(0) == Token.TokenTypes.DIVIDE || manageTokens.getSpecificToken(0) == Token.TokenTypes.MODULO) {
+                MathOpNode mathOp = new MathOpNode();
+                mathOp.left = factorHolder.get();
+                Token.TokenTypes operator = manageTokens.getSpecificToken(0);
+                switch(operator) {
+                  case TIMES -> {
+                      mathOp.op = MathOpNode.MathOperations.multiply;
+                      manageTokens.matchAndRemove(Token.TokenTypes.TIMES);
+                  }
+                  case DIVIDE -> {
+                      mathOp.op = MathOpNode.MathOperations.divide;
+                      manageTokens.matchAndRemove(Token.TokenTypes.DIVIDE);
+                  }
+                  case MODULO -> {
+                      mathOp.op = MathOpNode.MathOperations.modulo;
+                      manageTokens.matchAndRemove(Token.TokenTypes.MODULO);
+                  }
+              }
+              Optional<ExpressionNode> factorHolder2 = Factor();
+                if (factorHolder2.isPresent()) {
+                    mathOp.right = factorHolder2.get();
+                }
+                else
+                    throw new SyntaxErrorException("Expected a right expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                factorHolder = Optional.of(mathOp);
+            }
+            return factorHolder;
+        }
+        return Optional.empty();
+    }
+    public Optional<ExpressionNode> Factor() throws SyntaxErrorException {
+        if(manageTokens.matchAndRemove(Token.TokenTypes.NUMBER).isPresent()) {
+            NumericLiteralNode numberHolder = new NumericLiteralNode();
+            numberHolder.value = Float.parseFloat(manageTokens.getCurrentText());
+            return Optional.of(numberHolder);
+        }
+        if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+            Optional<VariableReferenceNode> vr = VariableReference();
+            VariableReferenceNode holder = vr.get();
+            return Optional.of(holder);
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.QUOTEDSTRING).isPresent()) {
+            StringLiteralNode stringHolder = new StringLiteralNode();
+            stringHolder.value = manageTokens.getCurrentText();
+            return Optional.of(stringHolder);
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.QUOTEDCHARACTER).isPresent()) {
+            CharLiteralNode charHolder = new CharLiteralNode();
+            charHolder.value = manageTokens.getCurrentText().charAt(0);
+            return Optional.of(charHolder);
+        }
+        Optional<MethodCallExpressionNode> mce = MethodCallExpression();
+        if(mce.isPresent()) {
+            MethodCallExpressionNode mceHolder = mce.get();
+            return Optional.of(mceHolder);
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isPresent()) {
+            Optional<ExpressionNode> expressionContainer = Expression();
+            if(expressionContainer.isPresent()) {
+                ExpressionNode exp = expressionContainer.get();
+                if(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
+                    throw new SyntaxErrorException("Expected a Right Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                }
+                return Optional.of(exp);
+            }
+            else
+                throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+        }
+        if(manageTokens.matchAndRemove(Token.TokenTypes.NEW).isPresent()) {
+            NewNode newHolder = new NewNode();
+            if(manageTokens.matchAndRemove(Token.TokenTypes.WORD).isEmpty()) {
+                throw new SyntaxErrorException("Expected an instance", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            newHolder.className = manageTokens.getCurrentText();
+            if(manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty()) {
+                throw new SyntaxErrorException("Expected a Left Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            Optional<ExpressionNode> expressionTake = Expression();
+            if(expressionTake.isPresent()) {
+                newHolder.parameters.add(expressionTake.get());
+                while(manageTokens.matchAndRemove(Token.TokenTypes.COMMA).isPresent()) {
+                    Optional<ExpressionNode> expressionTake2 = Expression();
+                    if(expressionTake2.isPresent()) {
+                        newHolder.parameters.add(expressionTake2.get());
+                    }
+                    else
+                        throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                }
+            }
+            if(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
+                throw new SyntaxErrorException("Expected a Right Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            }
+            return Optional.of(newHolder);
         }
         return Optional.empty();
     }
