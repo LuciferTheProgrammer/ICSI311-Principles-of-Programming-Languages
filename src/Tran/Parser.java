@@ -222,7 +222,15 @@ public class Parser {
                 classNode.constructors.add(constructorNode.get());
                 continue;
             }
-            if (manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
+            if(manageTokens.getSpecificToken(0) == Token.TokenTypes.SHARED ||
+                    manageTokens.getSpecificToken(0) == Token.TokenTypes.PRIVATE) {
+                Optional<MethodDeclarationNode> md = methodDeclaration();
+                if (md.isPresent()) {
+                    classNode.methods.add(md.get());
+                    continue;
+               }
+            }
+           if(manageTokens.getSpecificToken(0) == Token.TokenTypes.WORD) {
                 if ((manageTokens.getTokenSize() > 1) && (manageTokens.getSpecificToken(1) == Token.TokenTypes.LPAREN)) {
                     Optional<MethodDeclarationNode> md = methodDeclaration();
                     if (md.isPresent()) {
@@ -327,11 +335,14 @@ public class Parser {
      */
     public Optional<MethodDeclarationNode> methodDeclaration() throws SyntaxErrorException {
         MethodDeclarationNode methodDeclarationNode = new MethodDeclarationNode();
-        if (manageTokens.matchAndRemove(Token.TokenTypes.SHARED).isPresent()) {
-            methodDeclarationNode.isShared = true;
-        }
-        if (manageTokens.matchAndRemove(Token.TokenTypes.PRIVATE).isPresent()) {
-            methodDeclarationNode.isPrivate = true;
+        while(manageTokens.getSpecificToken(0) == Token.TokenTypes.SHARED ||
+        manageTokens.getSpecificToken(0) == Token.TokenTypes.PRIVATE) {
+            if (manageTokens.matchAndRemove(Token.TokenTypes.SHARED).isPresent()) {
+                methodDeclarationNode.isShared = true;
+            }
+            else if(manageTokens.matchAndRemove(Token.TokenTypes.PRIVATE).isPresent()) {
+                methodDeclarationNode.isPrivate = true;
+            }
         }
         Optional<MethodHeaderNode> methodHeader = methodHeaders();
         if (methodHeader.isEmpty()) {
@@ -827,7 +838,8 @@ public class Parser {
         else {
             Optional<Token> token = manageTokens.peek(1);
             Token take = token.get();
-            if(take.getType() == Token.TokenTypes.COMMA) {
+            if(take.getType() == Token.TokenTypes.COMMA || (take.getType() == Token.TokenTypes.ASSIGN &&
+                    manageTokens.getSpecificToken(2) == Token.TokenTypes.WORD &&  manageTokens.getSpecificToken(3) == Token.TokenTypes.DOT)) {
                 Optional<MethodCallStatementNode> mst = MethodCall();
                 MethodCallStatementNode contained = mst.get();
                 return Optional.of(contained);
