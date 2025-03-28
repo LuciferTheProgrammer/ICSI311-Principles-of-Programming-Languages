@@ -839,7 +839,9 @@ public class Parser {
             Optional<Token> token = manageTokens.peek(1);
             Token take = token.get();
             if(take.getType() == Token.TokenTypes.COMMA || (take.getType() == Token.TokenTypes.ASSIGN &&
-                    manageTokens.getSpecificToken(2) == Token.TokenTypes.WORD &&  manageTokens.getSpecificToken(3) == Token.TokenTypes.DOT)) {
+                    manageTokens.getSpecificToken(2) == Token.TokenTypes.WORD &&  manageTokens.getSpecificToken(3) == Token.TokenTypes.DOT)
+                    || (take.getType() == Token.TokenTypes.ASSIGN && manageTokens.getSpecificToken(2) == Token.TokenTypes.WORD &&
+                    manageTokens.getSpecificToken(3) == Token.TokenTypes.LPAREN)) {
                 Optional<MethodCallStatementNode> mst = MethodCall();
                 MethodCallStatementNode contained = mst.get();
                 return Optional.of(contained);
