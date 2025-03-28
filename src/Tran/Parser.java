@@ -562,7 +562,7 @@ public class Parser {
         if (bool.isPresent()) {
             holder.condition = bool.get();
         } else
-            holder.condition = new BooleanOpNode();
+            throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         RequireNewLine();
         List<StatementNode> statements = Statements();
         if (statements.isEmpty()) {
@@ -602,7 +602,7 @@ public class Parser {
         if (bool.isPresent()) {
             holder.expression = bool.get();
         } else
-            holder.expression = new BooleanOpNode();
+            throw new SyntaxErrorException("Expected an expression", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         RequireNewLine();
         List<StatementNode> statements = Statements();
         if (statements.isEmpty()) {
@@ -910,6 +910,17 @@ public class Parser {
         return Optional.empty();
     }
 
+    /**
+     * This method creates an Expression Node which is used to store the value returned from the
+     * Factor method. Then this method is used to check if the Expression Node has a value. If it has
+     * a value then a Math Op Node is created which is used to store the left hand Expression Node,
+     * then stores the Math Operator, and then the right hand Expression Node. If there is no Math Operator
+     * then the Expression Node is just returned. Otherwise, if there is no Expression Node present,
+     * an empty value if returned.
+     *
+     * @return The Expression Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
+     */
     public Optional<ExpressionNode> Term() throws SyntaxErrorException {
         Optional<ExpressionNode> factorHolder = Factor();
         if (factorHolder.isPresent()) {
@@ -943,6 +954,13 @@ public class Parser {
         }
         return Optional.empty();
     }
+
+    /**
+     * This method first creates
+     *
+     * @return
+     * @throws SyntaxErrorException
+     */
     public Optional<ExpressionNode> Factor() throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.NUMBER).isPresent()) {
             NumericLiteralNode numberHolder = new NumericLiteralNode();
