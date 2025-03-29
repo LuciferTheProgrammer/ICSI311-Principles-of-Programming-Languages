@@ -117,10 +117,10 @@ public class Parser {
             return Optional.empty();
         methodHeaderNode.name = manageTokens.getCurrentText();
         if ((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty()))
-            throw new SyntaxErrorException("Method must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method must have a left parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         checkParameterVariableSetUp(methodHeaderNode);
         if ((manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()))
-            throw new SyntaxErrorException("Method must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method must have a right parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         // Optional for methods on an interface and class.
         if ((manageTokens.matchAndRemove(Token.TokenTypes.COLON).isPresent())) {
             checkReturnVariableSetUp(methodHeaderNode);
@@ -292,11 +292,11 @@ public class Parser {
             return Optional.empty();
         }
         if ((manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty())) {
-            throw new SyntaxErrorException("Constructor must have a left parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Constructor must have a left parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         checkParameterConstructor(constructorNode);
         if (manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
-            throw new SyntaxErrorException("Constructor must have a right parentheses", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Constructor must have a right parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         RequireNewLine();
         methodBodyConstructor(constructorNode);
@@ -457,7 +457,7 @@ public class Parser {
                 sample.statements.add(collector.get());
                 continue;
             }
-            throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method body expected a variable declaration or a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if (manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -488,7 +488,7 @@ public class Parser {
                 sample.statements.add(collector.get());
                 continue;
             }
-            throw new SyntaxErrorException("Method expected a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Method body expected a variable declaration or a statement", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         if (manageTokens.matchAndRemove(Token.TokenTypes.DEDENT).isEmpty())
             throw new SyntaxErrorException("Method body expected a dedent", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
@@ -505,7 +505,7 @@ public class Parser {
     public List<StatementNode> Statements() throws SyntaxErrorException {
         List<StatementNode> statements = new ArrayList<>();
         if (manageTokens.matchAndRemove(Token.TokenTypes.INDENT).isEmpty()) {
-            throw new SyntaxErrorException("Indent Expected on statements", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+            throw new SyntaxErrorException("Indent expected on statements", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
         }
         while (manageTokens.getSpecificToken(0) != Token.TokenTypes.DEDENT) {
             Optional<StatementNode> statement = statement();
@@ -613,9 +613,15 @@ public class Parser {
     }
 
     /**
-     * This method creates and returns a Variable Reference Node (temporarily -> to be modified later).
+     * This method creates an Expression Node which is used to store the value returned from the
+     * Term method. This method then checks if the Expression Node has a value. If it has
+     * a value then a Math Op Node is created which is used to store the left hand Expression Node,
+     * then stores the Math Operator, and then the right hand Expression Node. If there is no Math Operator
+     * then the Expression Node is just returned. Otherwise, if there is no Expression Node present,
+     * an empty value is returned.
      *
-     * @return The Variable Reference Node.
+     * @return The instance of a class that implements the Expression Node or the Expression Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<ExpressionNode> Expression() throws SyntaxErrorException {
         Optional<ExpressionNode> term1 = Term();
@@ -651,11 +657,10 @@ public class Parser {
      * This method either returns a Method Call Expression Node, Compare Node, or Variable Reference Node.
      * If none of these options are present then the method returns empty.
      *
-     * @return The instance of a class that implements the Expression Node.
+     * @return The instance of a class that implements the Expression Node or the Expression Node.
      * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<ExpressionNode> BoolExpTerm() throws SyntaxErrorException {
-        BooleanOpNode boolOp = new BooleanOpNode();
         if(manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.LPAREN) ||
                 manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.DOT)) {
             Optional<MethodCallExpressionNode> methodCallExpressionNode = MethodCallExpression();
@@ -855,10 +860,17 @@ public class Parser {
     }
 
     /**
-     * This method generates and returns a Method Call Expression Node.
-     * (To be modified later, currently returns empty).
+     * This method generates a Method Call Expression Node. Then it first checks for the presence of a WORD
+     * token and DOT token, if both are present then the object name instance field of the Method Call
+     * Expression Node is set to the corresponding value (optional). The method proceeds to check for a WORD
+     * token, if there is one that is present then it sets the method name instance field to the corresponding
+     * value. Finally, the method checks for LPAREN token which contains at least more than 1 Expression Node
+     * separated by COMMA tokens and then for a closing RPAREN token. This adds all the Expression Nodes
+     * to the parameters list of the Method Call Expression Node. The method then proceeds to return
+     * the Method Call Expression Node.
      *
      * @return The Method Call Expression Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<MethodCallExpressionNode> MethodCallExpression() throws SyntaxErrorException {
         MethodCallExpressionNode mce = new MethodCallExpressionNode();
@@ -912,13 +924,13 @@ public class Parser {
 
     /**
      * This method creates an Expression Node which is used to store the value returned from the
-     * Factor method. Then this method is used to check if the Expression Node has a value. If it has
+     * Factor method. This method then checks if the Expression Node has a value. If it has
      * a value then a Math Op Node is created which is used to store the left hand Expression Node,
      * then stores the Math Operator, and then the right hand Expression Node. If there is no Math Operator
      * then the Expression Node is just returned. Otherwise, if there is no Expression Node present,
-     * an empty value if returned.
+     * an empty value is returned.
      *
-     * @return The Expression Node.
+     * @return The instance of a class that implements the Expression Node or the Expression Node.
      * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<ExpressionNode> Term() throws SyntaxErrorException {
@@ -956,10 +968,20 @@ public class Parser {
     }
 
     /**
-     * This method first creates
+     * The method first checks for the presence of a NUMBER token, if there is one then it generates
+     * and returns a Numeric Literal Node. It then checks for the presence of a WORD token and
+     * LPAREN token or a WORD token and DOT token, if there is one then it generates and
+     * returns a Method Call Expression Node. It then checks for the presence of WORD token, if
+     * it's present then it generates and returns a Variable Reference Node. It then checks for the
+     * presence of a QUOTED STRING token, if it's present then it generates and returns a String Literal
+     * Node. It then checks for the presence of a QUOTED CHARACTER token, if it's present then it generates
+     * and returns a Char Literal Node. It then checks for the presence of an Expression, if it's present
+     * then it generates and returns an Expression Node. Finally, it checks for the presence of a NEW token,
+     * if it's present then it generates a New Node which gets assigned a name and a list of Expression Nodes
+     * to hold, and then it returns the New Node. Otherwise, the method returns empty.
      *
-     * @return
-     * @throws SyntaxErrorException
+     * @return The instance of a class that implements the Expression Node or the Expression Node.
+     * @throws SyntaxErrorException When there is an error that occurs in the program.
      */
     public Optional<ExpressionNode> Factor() throws SyntaxErrorException {
         if(manageTokens.matchAndRemove(Token.TokenTypes.NUMBER).isPresent()) {
@@ -995,7 +1017,7 @@ public class Parser {
             if(expressionContainer.isPresent()) {
                 ExpressionNode exp = expressionContainer.get();
                 if(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
-                    throw new SyntaxErrorException("Expected a Right Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                    throw new SyntaxErrorException("Expected a right parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
                 }
                 return Optional.of(exp);
             }
@@ -1009,7 +1031,7 @@ public class Parser {
             }
             newHolder.className = manageTokens.getCurrentText();
             if(manageTokens.matchAndRemove(Token.TokenTypes.LPAREN).isEmpty()) {
-                throw new SyntaxErrorException("Expected a Left Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                throw new SyntaxErrorException("Expected a left parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             Optional<ExpressionNode> expressionTake = Expression();
             if(expressionTake.isPresent()) {
@@ -1024,7 +1046,7 @@ public class Parser {
                 }
             }
             if(manageTokens.matchAndRemove(Token.TokenTypes.RPAREN).isEmpty()) {
-                throw new SyntaxErrorException("Expected a Right Parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
+                throw new SyntaxErrorException("Expected a right parenthesis", manageTokens.getCurrentLine(), manageTokens.getCurrentColumnNumber());
             }
             return Optional.of(newHolder);
         }
