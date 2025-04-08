@@ -2,12 +2,12 @@ package Interpreter;
 
 import AST.*;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class Interpreter {
+
+    public TranNode head;
+    public HashMap<String, BuiltInMethodDeclarationNode> builtIn;
 
     /** Constructor - get the interpreter ready to run. Set members from parameters and "prepare" the class.
      *
@@ -16,6 +16,9 @@ public class Interpreter {
      * @param top - the head of the AST
      */
     public Interpreter(TranNode top) {
+        head = top;
+        builtIn = new HashMap<>();
+        builtIn.put("console.write", new ConsoleWrite());
     }
 
     /**
@@ -28,10 +31,24 @@ public class Interpreter {
      */
     public void start() {
         // Find the "start" method
-	
+        int numberClasses = head.Classes.size();
+        for(int i = 0; i < numberClasses; i++) {
+            int numberOfMethods = head.Classes.get(i).methods.size();
+            for(int k = 0; k < numberOfMethods; k++) {
+                MethodDeclarationNode mde = head.Classes.get(i).methods.get(k);
+                boolean shared = head.Classes.get(i).methods.get(k).isShared;
+                boolean privateHolder = head.Classes.get(i).methods.get(k).isPrivate;
+                String name = head.Classes.get(i).methods.get(k).name;
+                int noParam = head.Classes.get(i).methods.get(k).parameters.size();
+                if(shared && !privateHolder && name.equals("start") && noParam == 0) {
+                    List<InterpreterDataType> param = new ArrayList<>();
+                    interpretMethodCall(Optional.empty(), mde, param);
+                    return;
+                }
+            }
+        }
         throw new RuntimeException("No 'start' method found");
     }
-
     //              Running Methods
 
     /**
@@ -53,8 +70,72 @@ public class Interpreter {
      * @return - the return values
      */
     private List<InterpreterDataType> findMethodForMethodCallAndRunIt(Optional<ObjectIDT> object, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc) {
-        List<InterpreterDataType> result = null;
-        return result;
+        List<InterpreterDataType> holder = getParameters(object, locals, mc);
+        List<InterpreterDataType> result;
+        if(mc.objectName.isEmpty() && object.isPresent()) {
+            int numMethods = object.get().astNode.methods.size();
+            for(int i = 0; i < numMethods; i++) {
+                MethodDeclarationNode mde = object.get().astNode.methods.get(i);
+                if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
+                    && mde.returns.size() == mc.returnValues.size()) {
+                    result = interpretMethodCall(object, mde, holder);
+                    return result;
+                }
+            }
+        }
+        else if(mc.objectName.isPresent() && object.isEmpty()) {
+            String builtInName = mc.objectName.get() + "." + mc.methodName;
+            if(builtIn.containsKey(builtInName)) {
+                ConsoleWrite cr = (ConsoleWrite) builtIn.get(builtInName);
+                result = interpretMethodCall(Optional.empty(), cr, holder);
+                return result;
+            }
+            int numClasses = head.Classes.size();
+            for(int i = 0; i < numClasses; i++) {
+                if(mc.objectName.get().equals(head.Classes.get(i).name)) {
+                    int methods = head.Classes.get(i).methods.size();
+                    for(int k = 0; k < methods; k++) {
+                        MethodDeclarationNode mde = head.Classes.get(i).methods.get(k);
+                        if(mc.methodName.equals(mde.name) && mde.isShared && mde.parameters.size() == mc.parameters.size()
+                            && mde.returns.size() == mc.returnValues.size()) {
+                            result = interpretMethodCall(Optional.empty(), mde, holder);
+                            return result;
+                        }
+                    }
+                }
+            }
+        }
+        else if(mc.objectName.isPresent()) {
+            String placement = mc.objectName.get();
+            if(locals.containsKey(placement)) {
+                ObjectIDT idt = (ObjectIDT)locals.get(placement);
+                int numMethods = idt.astNode.methods.size();
+                for(int i = 0; i < numMethods; i++) {
+                    MethodDeclarationNode mde = idt.astNode.methods.get(i);
+                    if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size() &&
+                        mde.returns.size() == mc.returnValues.size()) {
+                        result = interpretMethodCall(Optional.of(idt), mde, holder);
+                        return result;
+                    }
+                }
+            }
+            if(object.isPresent()) {
+                if(object.get().members.containsKey(placement)) {
+                    ObjectIDT idt = (ObjectIDT) object.get().members.get(placement);
+                    int numMethods = idt.astNode.methods.size();
+                    for(int i = 0; i < numMethods; i++) {
+                        MethodDeclarationNode mde = idt.astNode.methods.get(i);
+                        if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
+                            && mde.returns.size() == mc.returnValues.size()) {
+                            result = interpretMethodCall(Optional.of(idt), mde, holder);
+                            return result;
+                        }
+                    }
+                }
+
+            }
+        }
+        throw new RuntimeException("No method to match");
     }
 
     /**
@@ -215,6 +296,41 @@ public class Interpreter {
      * @return is this OK?
      */
     private boolean typeMatchToIDT(String type, InterpreterDataType idt) {
+        if(type.equals("boolean") && idt instanceof BooleanIDT) {
+            return true;
+        }
+        if(type.equals("string") && idt instanceof StringIDT) {
+            return true;
+        }
+        if(type.equals("number") && idt instanceof NumberIDT) {
+            return true;
+        }
+        if(type.equals("character") && idt instanceof CharIDT) {
+            return true;
+        }
+        if(idt instanceof ObjectIDT) {
+            ObjectIDT obj = (ObjectIDT)idt;
+            if(type.equals(obj.astNode.name)) {
+                return true;
+            }
+            if(!obj.astNode.interfaces.isEmpty()) {
+                int numInterfaces = obj.astNode.interfaces.size();
+                for(int i = 0; i < numInterfaces; i++) {
+                    if(type.equals(obj.astNode.interfaces.get(i))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        if(idt instanceof ReferenceIDT) {
+            ReferenceIDT ref = (ReferenceIDT)idt;
+            if(ref.refersTo.isEmpty())
+                return false;
+            else {
+                ObjectIDT holder = ref.refersTo.get();
+                return typeMatchToIDT(type, holder);
+            }
+        }
         throw new RuntimeException("Unable to resolve type " + type);
     }
 
@@ -228,6 +344,13 @@ public class Interpreter {
      * @return a method or throws an exception
      */
     private MethodDeclarationNode getMethodFromObject(ObjectIDT object, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
+        int numbOfMethods = object.astNode.methods.size();
+        for(int i = 0; i < numbOfMethods; i++) {
+            MethodDeclarationNode mde = object.astNode.methods.get(i);
+            if(doesMatch(mde, mc, parameters)) {
+                return mde;
+            }
+        }
         throw new RuntimeException("Unable to resolve method call " + mc);
     }
 
@@ -239,6 +362,13 @@ public class Interpreter {
      * @return either a class node or empty if that class doesn't exist
      */
     private Optional<ClassNode> getClassByName(String name) {
+        int numberOfClasses = head.Classes.size();
+        for(int i = 0; i < numberOfClasses; i++) {
+            if(head.Classes.get(i).name.equals(name)) {
+                ClassNode cl = head.Classes.get(i);
+                return Optional.of(cl);
+            }
+        }
         return Optional.empty();
     }
 
@@ -251,6 +381,16 @@ public class Interpreter {
      * @return the IDT that we are looking for or throw an exception
      */
     private InterpreterDataType findVariable(String name, HashMap<String,InterpreterDataType> locals, Optional<ObjectIDT> object) {
+        if(locals.containsKey(name)) {
+            InterpreterDataType placement  = locals.get(name);
+            return placement;
+        }
+        if(object.isPresent()) {
+            if(object.get().members.containsKey(name)) {
+                InterpreterDataType holder = object.get().members.get(name);
+                return holder;
+            }
+        }
         throw new RuntimeException("Unable to find variable " + name);
     }
 
@@ -261,6 +401,22 @@ public class Interpreter {
      * @return an IDT with default values (0 for number, "" for string, false for boolean, ' ' for character)
      */
     private InterpreterDataType instantiate(String type) {
-	    return null;
+        switch (type) {
+            case "string" -> {
+                return new StringIDT("");
+            }
+            case "number" -> {
+                return new NumberIDT(0);
+            }
+            case "boolean" -> {
+                return new BooleanIDT(false);
+            }
+            case "character" -> {
+                return new CharIDT(' ');
+            }
+            default -> {
+                return new ReferenceIDT();
+            }
+        }
     }
 }
