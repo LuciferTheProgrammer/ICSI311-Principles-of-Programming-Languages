@@ -257,7 +257,25 @@ public class Interpreter {
      * @return does this method match the method call?
      */
     private boolean doesMatch(MethodDeclarationNode m, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
-        return true;
+        if(m instanceof BuiltInMethodDeclarationNode && ((BuiltInMethodDeclarationNode) m).isVariadic) {
+            if(m.name.equals(mc.methodName)) {
+                return true;
+            }
+            return false;
+        }
+        if (m.name.equals(mc.methodName) && m.parameters.size() == mc.parameters.size() && m.parameters.size() == parameters.size()
+                && m.returns.size() == mc.returnValues.size()) {
+            int numOfParameters = m.parameters.size();
+            for (int i = 0; i < numOfParameters; i++) {
+                VariableDeclarationNode vr = m.parameters.get(i);
+                InterpreterDataType idt = parameters.get(i);
+                if(!typeMatchToIDT(vr.type, idt)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -268,7 +286,18 @@ public class Interpreter {
      * @return does this constructor match the method call?
      */
     private boolean doesConstructorMatch(ConstructorNode c, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
-        return true;
+        if(c.parameters.size() == mc.parameters.size() && c.parameters.size() == parameters.size()) {
+            int numberOfParameters = c.parameters.size();
+            for(int i = 0; i < numberOfParameters; i++) {
+                VariableDeclarationNode vr = c.parameters.get(i);
+                InterpreterDataType idt = parameters.get(i);
+                if(!(typeMatchToIDT(vr.type, idt))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -281,9 +310,16 @@ public class Interpreter {
      * @return the list of method values
      */
     private List<InterpreterDataType> getParameters(Optional<ObjectIDT> object, HashMap<String,InterpreterDataType> locals, MethodCallStatementNode mc) {
-        return null;
+        int numParameters = mc.parameters.size();
+        List<InterpreterDataType> result = new ArrayList<>();
+        for(int i = 0; i < numParameters; i++) {
+            ExpressionNode holder = mc.parameters.get(i);
+            InterpreterDataType idt = evaluate(locals, object, holder);
+            result.add(idt);
+        }
+        return result;
     }
-
+    //Ask Professor more clarification.....typeMatchToIDT
     /**
      * Used when we have an IDT and we want to see if it matches a type definition
      * Commonly, when someone is making a function call - do the parameter values match the method declaration?
