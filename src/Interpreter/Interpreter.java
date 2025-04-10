@@ -238,7 +238,113 @@ public class Interpreter {
      * @return a value
      */
     private InterpreterDataType evaluate(HashMap<String, InterpreterDataType> locals, Optional<ObjectIDT> object, ExpressionNode expression) {
-          throw new IllegalArgumentException();
+        // Possibly implement BooleanLiteralNode for BooleanIDT later....
+        if(expression instanceof NumericLiteralNode number)
+            return new NumberIDT(number.value);
+        if(expression instanceof StringLiteralNode string)
+            return new StringIDT(string.value);
+        if(expression instanceof CharLiteralNode chars)
+            return new CharIDT(chars.value);
+        if(expression instanceof CompareNode c) {
+            InterpreterDataType left = evaluate(locals, object, c.left);
+            InterpreterDataType right = evaluate(locals, object, c.right);
+            if (left instanceof NumberIDT l && right instanceof NumberIDT r) {
+                if(c.op == CompareNode.CompareOperations.lt) {
+                    return new BooleanIDT(l.Value < r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.gt) {
+                    return new BooleanIDT(l.Value > r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.eq) {
+                    return new BooleanIDT(l.Value == r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.ne) {
+                    return new BooleanIDT(l.Value != r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.le) {
+                    return new BooleanIDT(l.Value <= r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.ge) {
+                    return new BooleanIDT(l.Value >= r.Value);
+                }
+            }
+            if (left instanceof CharIDT l && right instanceof CharIDT r) {
+                if(c.op == CompareNode.CompareOperations.lt) {
+                    return new BooleanIDT(l.Value < r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.gt) {
+                    return new BooleanIDT(l.Value > r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.eq) {
+                    return new BooleanIDT(l.Value == r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.ne) {
+                    return new BooleanIDT(l.Value != r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.le) {
+                    return new BooleanIDT(l.Value <= r.Value);
+                }
+                if(c.op == CompareNode.CompareOperations.ge) {
+                    return new BooleanIDT(l.Value >= r.Value);
+                }
+            }
+            if (left instanceof StringIDT l && right instanceof StringIDT r) {
+                if(c.op == CompareNode.CompareOperations.lt) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) < 0);
+                }
+                if(c.op == CompareNode.CompareOperations.gt) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) > 0);
+                }
+                if(c.op == CompareNode.CompareOperations.eq) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) == 0);
+                }
+                if(c.op == CompareNode.CompareOperations.ne) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) != 0);
+                }
+                if(c.op == CompareNode.CompareOperations.le) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) <= 0);
+                }
+                if(c.op == CompareNode.CompareOperations.ge) {
+                    return new BooleanIDT(l.Value.compareTo(r.Value) >= 0);
+                }
+            }
+
+        }
+        if(expression instanceof MathOpNode math) {
+            InterpreterDataType left = evaluate(locals, object, math.left);
+            InterpreterDataType right = evaluate(locals, object, math.right);
+            if(left instanceof NumberIDT l && right instanceof NumberIDT r) {
+                switch(math.op) {
+                    case add -> {
+                        return new NumberIDT(l.Value + r.Value);
+                    }
+                    case subtract -> {
+                        return new NumberIDT(l.Value - r.Value);
+                    }
+                    case multiply -> {
+                        return new NumberIDT(l.Value * r.Value);
+                    }
+                    case divide -> {
+                        return new NumberIDT(l.Value / r.Value);
+                    }
+                    case modulo -> {
+                        return new NumberIDT(l.Value % r.Value);
+                    }
+                }
+            }
+            if(left instanceof StringIDT l && right instanceof StringIDT r) {
+                switch(math.op) {
+                    case add -> {
+                        return new StringIDT(l.Value + r.Value);
+                    }
+                }
+            }
+        }
+        if(expression instanceof VariableReferenceNode variable) {
+            return findVariable(variable.name, locals, object);
+        }
+
+        throw new IllegalArgumentException();
     }
 
     //              Utility Methods
