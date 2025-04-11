@@ -247,7 +247,7 @@ public class Interpreter {
                         int numMethods = obj.astNode.methods.size();
                         for (int i = 0; i < numMethods; i++) {
                             MethodDeclarationNode mde = obj.astNode.methods.get(i);
-                            // Might implement number of "returns"/
+                            // Might implement number of "returns"
                             if(mde.name.equals("getNext") && mde.parameters.isEmpty()) {
                                 flagger2 = true;
                                 break;
