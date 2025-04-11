@@ -17,8 +17,14 @@ public class Interpreter {
      */
     public Interpreter(TranNode top) {
         head = top;
-        builtIn = new HashMap<>();
-        builtIn.put("console.write", new ConsoleWrite());
+        ClassNode cw = new ClassNode();
+        cw.name = "console";
+        ConsoleWrite cws = new ConsoleWrite();
+        cws.name = "write";
+        cws.isShared = true;
+        cws.isVariadic = true;
+        cw.methods.add(cws);
+        head.Classes.add(cw);
     }
 
     /**
@@ -84,12 +90,12 @@ public class Interpreter {
             }
         }
         else if(mc.objectName.isPresent() && object.isEmpty()) {
-            String builtInName = mc.objectName.get() + "." + mc.methodName;
-            if(builtIn.containsKey(builtInName)) {
-                ConsoleWrite cr = (ConsoleWrite) builtIn.get(builtInName);
-                result = interpretMethodCall(Optional.empty(), cr, holder);
-                return result;
-            }
+            //String builtInName = mc.objectName.get() + "." + mc.methodName;
+            //if(builtIn.containsKey(builtInName)) {
+            //    ConsoleWrite cr = (ConsoleWrite) builtIn.get(builtInName);
+            //    result = interpretMethodCall(Optional.empty(), cr, holder);
+            //    return result;
+            //}
             int numClasses = head.Classes.size();
             for(int i = 0; i < numClasses; i++) {
                 if(mc.objectName.get().equals(head.Classes.get(i).name)) {
