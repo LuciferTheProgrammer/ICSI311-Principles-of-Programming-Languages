@@ -217,6 +217,59 @@ public class Interpreter {
      * @param locals - the local variables
      */
     private void interpretStatementBlock(Optional<ObjectIDT> object, List<StatementNode> statements, HashMap<String, InterpreterDataType> locals) {
+        for(StatementNode statement: statements) {
+            if(statement instanceof AssignmentNode a) {
+                InterpreterDataType targetResult = findVariable(a.target.name, locals, object);
+                InterpreterDataType eval = evaluate(locals, object, a.expression);
+                targetResult.Assign(eval);
+            }
+            else if(statement instanceof MethodCallStatementNode ms) {
+                List<InterpreterDataType> result = findMethodForMethodCallAndRunIt(object, locals, ms);
+                int numReturns = result.size();
+                for(int i  = 0; i < numReturns; i++) {
+                    locals.put(ms.returnValues.get(i).name, result.get(i));
+                }
+            }
+            else if(statement instanceof LoopNode loop) {
+                if(object.isPresent()) {
+                    ObjectIDT obj = object.get();
+                    int numInterfaces = obj.astNode.interfaces.size();
+                    boolean flagger = false;
+                    for(int i = 0; i < numInterfaces; i++) {
+                        String currInterface = obj.astNode.interfaces.get(i);
+                        if(currInterface.equals("iterator")) {
+                            flagger = true;
+                            break;
+                        }
+                    }
+                    if(flagger) {
+                        boolean flagger2 = false;
+                        int numMethods = obj.astNode.methods.size();
+                        for (int i = 0; i < numMethods; i++) {
+                            MethodDeclarationNode mde = obj.astNode.methods.get(i);
+                            // Might implement number of "returns"/
+                            if(mde.name.equals("getNext") && mde.parameters.isEmpty()) {
+                                flagger2 = true;
+                                break;
+                            }
+                        }
+                        if(!flagger2) {
+                            throw new RuntimeException("No iterator method found");
+                        }
+                        boolean done = false;
+                        while(!done) {
+                            InterpreterDataType result = evaluate(locals, object, loop.expression);
+                            if(result instanceof BooleanIDT bool){
+                                if(loop.assignment.isPresent()) {
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 
     /**
@@ -340,10 +393,15 @@ public class Interpreter {
                 }
             }
         }
+        if(expression instanceof MethodCallExpressionNode mce) {
+            MethodCallStatementNode mse = new MethodCallStatementNode(mce);
+            List<InterpreterDataType> result = findMethodForMethodCallAndRunIt(object, locals, mse);
+            return result.get(0);
+
+        }
         if(expression instanceof VariableReferenceNode variable) {
             return findVariable(variable.name, locals, object);
         }
-
         throw new IllegalArgumentException();
     }
 
@@ -425,7 +483,6 @@ public class Interpreter {
         }
         return result;
     }
-    //Ask Professor more clarification.....typeMatchToIDT
     /**
      * Used when we have an IDT and we want to see if it matches a type definition
      * Commonly, when someone is making a function call - do the parameter values match the method declaration?
@@ -438,40 +495,44 @@ public class Interpreter {
      * @return is this OK?
      */
     private boolean typeMatchToIDT(String type, InterpreterDataType idt) {
-        if(type.equals("boolean") && idt instanceof BooleanIDT) {
-            return true;
-        }
-        if(type.equals("string") && idt instanceof StringIDT) {
-            return true;
-        }
-        if(type.equals("number") && idt instanceof NumberIDT) {
-            return true;
-        }
-        if(type.equals("character") && idt instanceof CharIDT) {
-            return true;
-        }
-        if(idt instanceof ObjectIDT) {
-            ObjectIDT obj = (ObjectIDT)idt;
-            if(type.equals(obj.astNode.name)) {
+        if(idt instanceof StringIDT || idt instanceof NumberIDT || idt instanceof BooleanIDT ||
+            idt instanceof CharIDT || idt instanceof ObjectIDT || idt instanceof ReferenceIDT) {
+            if (type.equals("boolean") && idt instanceof BooleanIDT) {
                 return true;
             }
-            if(!obj.astNode.interfaces.isEmpty()) {
-                int numInterfaces = obj.astNode.interfaces.size();
-                for(int i = 0; i < numInterfaces; i++) {
-                    if(type.equals(obj.astNode.interfaces.get(i))) {
-                        return true;
+            if (type.equals("string") && idt instanceof StringIDT) {
+                return true;
+            }
+            if (type.equals("number") && idt instanceof NumberIDT) {
+                return true;
+            }
+            if (type.equals("character") && idt instanceof CharIDT) {
+                return true;
+            }
+            if (idt instanceof ObjectIDT) {
+                ObjectIDT obj = (ObjectIDT) idt;
+                if (type.equals(obj.astNode.name)) {
+                    return true;
+                }
+                if (!obj.astNode.interfaces.isEmpty()) {
+                    int numInterfaces = obj.astNode.interfaces.size();
+                    for (int i = 0; i < numInterfaces; i++) {
+                        if (type.equals(obj.astNode.interfaces.get(i))) {
+                            return true;
+                        }
                     }
                 }
             }
-        }
-        if(idt instanceof ReferenceIDT) {
-            ReferenceIDT ref = (ReferenceIDT)idt;
-            if(ref.refersTo.isEmpty())
-                return false;
-            else {
-                ObjectIDT holder = ref.refersTo.get();
-                return typeMatchToIDT(type, holder);
+            if (idt instanceof ReferenceIDT) {
+                ReferenceIDT ref = (ReferenceIDT) idt;
+                if (ref.refersTo.isEmpty())
+                    return false;
+                else {
+                    ObjectIDT holder = ref.refersTo.get();
+                    return typeMatchToIDT(type, holder);
+                }
             }
+            return false;
         }
         throw new RuntimeException("Unable to resolve type " + type);
     }
