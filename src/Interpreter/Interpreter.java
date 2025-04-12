@@ -8,11 +8,14 @@ public class Interpreter {
 
     public TranNode head;
     public HashMap<String, BuiltInMethodDeclarationNode> builtIn;
+    public Iterator<InterpreterDataType> iterator;
 
-    /** Constructor - get the interpreter ready to run. Set members from parameters and "prepare" the class.
-     *
+    /**
+     * Constructor - get the interpreter ready to run. Set members from parameters and "prepare" the class.
+     * <p>
      * Store the tran node.
      * Add any built-in methods to the AST
+     *
      * @param top - the head of the AST
      */
     public Interpreter(TranNode top) {
@@ -25,12 +28,13 @@ public class Interpreter {
         cws.isVariadic = true;
         cw.methods.add(cws);
         head.Classes.add(cw);
+
     }
 
     /**
      * This is the public interface to the interpreter. After parsing, we will create an interpreter and call start to
      * start interpreting the code.
-     *
+     * <p>
      * Search the classes in Tran for a method that is "isShared", named "start", that is not private and has no parameters
      * Call "InterpretMethodCall" on that method, then return.
      * Throw an exception if no such method exists.
@@ -38,15 +42,15 @@ public class Interpreter {
     public void start() {
         // Find the "start" method
         int numberClasses = head.Classes.size();
-        for(int i = 0; i < numberClasses; i++) {
+        for (int i = 0; i < numberClasses; i++) {
             int numberOfMethods = head.Classes.get(i).methods.size();
-            for(int k = 0; k < numberOfMethods; k++) {
+            for (int k = 0; k < numberOfMethods; k++) {
                 MethodDeclarationNode mde = head.Classes.get(i).methods.get(k);
                 boolean shared = head.Classes.get(i).methods.get(k).isShared;
                 boolean privateHolder = head.Classes.get(i).methods.get(k).isPrivate;
                 String name = head.Classes.get(i).methods.get(k).name;
                 int noParam = head.Classes.get(i).methods.get(k).parameters.size();
-                if(shared && !privateHolder && name.equals("start") && noParam == 0) {
+                if (shared && !privateHolder && name.equals("start") && noParam == 0) {
                     List<InterpreterDataType> param = new ArrayList<>();
                     interpretMethodCall(Optional.empty(), mde, param);
                     return;
@@ -61,35 +65,35 @@ public class Interpreter {
      * Find the method (local to this class, shared (like Java's system.out.print), or a method on another class)
      * Evaluate the parameters to have a list of values
      * Use interpretMethodCall() to actually run the method.
-     *
+     * <p>
      * Call GetParameters() to get the parameter value list
      * Find the method. This is tricky - there are several cases:
      * someLocalMethod() - has NO object name. Look in "object"
      * console.write() - the objectName is a CLASS and the method is shared
      * bestStudent.getGPA() - the objectName is a local or a member
-     *
+     * <p>
      * Once you find the method, call InterpretMethodCall() on it. Return the list that it returns.
      * Throw an exception if we can't find a match.
+     *
      * @param object - the object we are inside right now (might be empty)
      * @param locals - the current local variables
-     * @param mc - the method call
+     * @param mc     - the method call
      * @return - the return values
      */
     private List<InterpreterDataType> findMethodForMethodCallAndRunIt(Optional<ObjectIDT> object, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc) {
         List<InterpreterDataType> holder = getParameters(object, locals, mc);
         List<InterpreterDataType> result;
-        if(mc.objectName.isEmpty() && object.isPresent()) {
+        if (mc.objectName.isEmpty() && object.isPresent()) {
             int numMethods = object.get().astNode.methods.size();
-            for(int i = 0; i < numMethods; i++) {
+            for (int i = 0; i < numMethods; i++) {
                 MethodDeclarationNode mde = object.get().astNode.methods.get(i);
-                if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
-                    && mde.returns.size() == mc.returnValues.size()) {
+                if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
+                        && mde.returns.size() == mc.returnValues.size()) {
                     result = interpretMethodCall(object, mde, holder);
                     return result;
                 }
             }
-        }
-        else if(mc.objectName.isPresent() && object.isEmpty()) {
+        } else if (mc.objectName.isPresent() && object.isEmpty()) {
             //String builtInName = mc.objectName.get() + "." + mc.methodName;
             //if(builtIn.containsKey(builtInName)) {
             //    ConsoleWrite cr = (ConsoleWrite) builtIn.get(builtInName);
@@ -97,42 +101,41 @@ public class Interpreter {
             //    return result;
             //}
             int numClasses = head.Classes.size();
-            for(int i = 0; i < numClasses; i++) {
-                if(mc.objectName.get().equals(head.Classes.get(i).name)) {
+            for (int i = 0; i < numClasses; i++) {
+                if (mc.objectName.get().equals(head.Classes.get(i).name)) {
                     int methods = head.Classes.get(i).methods.size();
-                    for(int k = 0; k < methods; k++) {
+                    for (int k = 0; k < methods; k++) {
                         MethodDeclarationNode mde = head.Classes.get(i).methods.get(k);
-                        if(mc.methodName.equals(mde.name) && mde.isShared && mde.parameters.size() == mc.parameters.size()
-                            && mde.returns.size() == mc.returnValues.size()) {
+                        if (mc.methodName.equals(mde.name) && mde.isShared && mde.parameters.size() == mc.parameters.size()
+                                && mde.returns.size() == mc.returnValues.size()) {
                             result = interpretMethodCall(Optional.empty(), mde, holder);
                             return result;
                         }
                     }
                 }
             }
-        }
-        else if(mc.objectName.isPresent()) {
+        } else if (mc.objectName.isPresent()) {
             String placement = mc.objectName.get();
-            if(locals.containsKey(placement)) {
-                ObjectIDT idt = (ObjectIDT)locals.get(placement);
+            if (locals.containsKey(placement)) {
+                ObjectIDT idt = (ObjectIDT) locals.get(placement);
                 int numMethods = idt.astNode.methods.size();
-                for(int i = 0; i < numMethods; i++) {
+                for (int i = 0; i < numMethods; i++) {
                     MethodDeclarationNode mde = idt.astNode.methods.get(i);
-                    if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size() &&
-                        mde.returns.size() == mc.returnValues.size()) {
+                    if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size() &&
+                            mde.returns.size() == mc.returnValues.size()) {
                         result = interpretMethodCall(Optional.of(idt), mde, holder);
                         return result;
                     }
                 }
             }
-            if(object.isPresent()) {
-                if(object.get().members.containsKey(placement)) {
+            if (object.isPresent()) {
+                if (object.get().members.containsKey(placement)) {
                     ObjectIDT idt = (ObjectIDT) object.get().members.get(placement);
                     int numMethods = idt.astNode.methods.size();
-                    for(int i = 0; i < numMethods; i++) {
+                    for (int i = 0; i < numMethods; i++) {
                         MethodDeclarationNode mde = idt.astNode.methods.get(i);
-                        if(mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
-                            && mde.returns.size() == mc.returnValues.size()) {
+                        if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
+                                && mde.returns.size() == mc.returnValues.size()) {
                             result = interpretMethodCall(Optional.of(idt), mde, holder);
                             return result;
                         }
@@ -148,15 +151,16 @@ public class Interpreter {
      * Run a "prepared" method (found, parameters evaluated)
      * This is split from findMethodForMethodCallAndRunIt() because there are a few cases where we don't need to do the finding:
      * in start() and dealing with loops with iterator objects, for example.
-     *
+     * <p>
      * Check to see if "m" is a built-in. If so, call Execute() on it and return
      * Make local variables, per "m"
      * If the number of passed in values doesn't match m's "expectations", throw
      * Add the parameters by name to locals.
      * Call InterpretStatementBlock
      * Build the return list - find the names from "m", then get the values for those names and add them to the list.
+     *
      * @param object - The object this method is being called on (might be empty for shared)
-     * @param m - Which method is being called
+     * @param m      - Which method is being called
      * @param values - The values to be passed in
      * @return the returned values from the method
      */
@@ -169,33 +173,70 @@ public class Interpreter {
 
     /**
      * This is a special case of the code for methods. Just different enough to make it worthwhile to split it out.
-     *
+     * <p>
      * Call GetParameters() to populate a list of IDT's
      * Call GetClassByName() to find the class for the constructor
      * If we didn't find the class, throw an exception
      * Find a constructor that is a good match - use DoesConstructorMatch()
      * Call InterpretConstructorCall() on the good match
+     *
      * @param callerObj - the object that we are inside when we called the constructor
-     * @param locals - the current local variables (used to fill parameters)
-     * @param mc  - the method call for this construction
-     * @param newOne - the object that we just created that we are calling the constructor for
+     * @param locals    - the current local variables (used to fill parameters)
+     * @param mc        - the method call for this construction
+     * @param newOne    - the object that we just created that we are calling the constructor for
      */
     private void findConstructorAndRunIt(Optional<ObjectIDT> callerObj, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc, ObjectIDT newOne) {
+        List<InterpreterDataType> results = getParameters(callerObj, locals, mc);
+        Optional<ClassNode> cl = getClassByName(mc.methodName);
+        if(cl.isPresent()) {
+          ClassNode currentCl = cl.get();
+          int numberConstructors = currentCl.constructors.size();
+          for(int i = 0; i < numberConstructors; i++) {
+              ConstructorNode currentConstructor = currentCl.constructors.get(i);
+              if(doesConstructorMatch(currentConstructor, mc, results)) {
+                  interpretConstructorCall(newOne, currentConstructor, results);
+                  break;
+              }
+          }
+        }
+        else {
+            throw new RuntimeException("No matching Class found");
+        }
     }
 
     /**
      * Similar to interpretMethodCall, but "just different enough" - for example, constructors don't return anything.
-     *
+     * <p>
      * Creates local variables (as defined by the ConstructorNode), calls Instantiate() to do the creation
      * Checks to ensure that the right number of parameters were passed in, if not throw.
      * Adds the parameters (with the names from the ConstructorNode) to the locals.
      * Calls InterpretStatementBlock
+     *
      * @param object - the object that we allocated
-     * @param c - which constructor is being called
+     * @param c      - which constructor is being called
      * @param values - the parameter values being passed to the constructor
      */
     private void interpretConstructorCall(ObjectIDT object, ConstructorNode c, List<InterpreterDataType> values) {
+        int numberOfLocals = c.locals.size();
+        HashMap<String, InterpreterDataType> locals = new HashMap<>();
+        for(int i = 0; i < numberOfLocals; i++) {
+            VariableDeclarationNode vr = c.locals.get(i);
+            InterpreterDataType placement = instantiate(vr.type);
+            locals.put(vr.name, placement);
+        }
+        if(c.parameters.size() != values.size()) {
+            throw new RuntimeException("Number of parameters does not match");
+        }
+        else {
+            int numParams = c.parameters.size();
+            for(int i = 0; i < numParams; i++) {
+                VariableDeclarationNode param = c.parameters.get(i);
+                locals.put(param.name, values.get(i));
+            }
+            interpretStatementBlock(Optional.of(object), c.statements, locals);
+        }
     }
+
 
     //              Running Instructions
 
@@ -223,157 +264,238 @@ public class Interpreter {
      * @param locals - the local variables
      */
     private void interpretStatementBlock(Optional<ObjectIDT> object, List<StatementNode> statements, HashMap<String, InterpreterDataType> locals) {
-        for(StatementNode statement: statements) {
-            if(statement instanceof AssignmentNode a) {
+        for (StatementNode statement : statements) {
+            if (statement instanceof AssignmentNode a) {
                 InterpreterDataType targetResult = findVariable(a.target.name, locals, object);
                 InterpreterDataType eval = evaluate(locals, object, a.expression);
                 targetResult.Assign(eval);
             }
-            else if(statement instanceof MethodCallStatementNode ms) {
+            else if (statement instanceof MethodCallStatementNode ms) {
+                //To implement findConstructorAndRunIt Later.....
                 List<InterpreterDataType> result = findMethodForMethodCallAndRunIt(object, locals, ms);
                 int numReturns = result.size();
-                for(int i  = 0; i < numReturns; i++) {
+                for (int i = 0; i < numReturns; i++) {
                     locals.put(ms.returnValues.get(i).name, result.get(i));
                 }
             }
-            else if(statement instanceof LoopNode loop) {
-                if(object.isPresent()) {
+            else if (statement instanceof LoopNode loop) {
+                boolean iteratorInterface = false;
+                boolean iteratorTimes = false;
+                MethodDeclarationNode objGetNext = new MethodDeclarationNode();
+                if (object.isPresent() && (checkIteratorInterface(object.get()))) {
+                    iteratorInterface = true;
                     ObjectIDT obj = object.get();
-                    int numInterfaces = obj.astNode.interfaces.size();
-                    boolean flagger = false;
-                    for(int i = 0; i < numInterfaces; i++) {
-                        String currInterface = obj.astNode.interfaces.get(i);
-                        if(currInterface.equals("iterator")) {
-                            flagger = true;
+                    boolean flag = false;
+                    int numMethods = obj.astNode.methods.size();
+                    for (int k = 0; k < numMethods; k++) {
+                        MethodDeclarationNode mde = obj.astNode.methods.get(k);
+                        if (mde.name.equals("getNext") && mde.parameters.isEmpty()) {
+                            flag = true;
+                            objGetNext = mde;
                             break;
                         }
                     }
-                    if(flagger) {
-                        boolean flagger2 = false;
-                        int numMethods = obj.astNode.methods.size();
-                        for (int i = 0; i < numMethods; i++) {
-                            MethodDeclarationNode mde = obj.astNode.methods.get(i);
-                            // Might implement number of "returns"
-                            if(mde.name.equals("getNext") && mde.parameters.isEmpty()) {
-                                flagger2 = true;
-                                break;
-                            }
-                        }
-                        if(!flagger2) {
-                            throw new RuntimeException("No iterator method found");
-                        }
-                        boolean done = false;
-                        while(!done) {
-                            InterpreterDataType result = evaluate(locals, object, loop.expression);
-                            if(result instanceof BooleanIDT bool){
-                                if(loop.assignment.isPresent()) {
+                    if(!flag) {
+                        throw new RuntimeException("No getNext method found");
+                    }
+                }
+                else if(loop.expression instanceof MethodCallExpressionNode mce && mce.methodName
+                        .equals("times")) {
+                    iteratorTimes = true;
+                    InterpreterDataType placement = evaluate(locals, object, loop.expression);
+                    if (placement instanceof NumberIDT num) {
+                        int counter = (int) num.Value;
+                        iterator = new Iterator<InterpreterDataType>() {
+                            int distance = 1;
 
+                            @Override
+                            public boolean hasNext() {
+                                return counter >= distance;
+                            }
+
+                            @Override
+                            public InterpreterDataType next() {
+                                if (!hasNext()) {
+                                    throw new NoSuchElementException("No more elements");
+                                }
+                                else {
+                                    NumberIDT number = new NumberIDT(distance);
+                                    distance++;
+                                    return number;
                                 }
                             }
+                        };
+                    }
+                }
+                boolean done = false;
+                while(!done) {
+                    if(iteratorInterface) {
+                        // Iterator Case Interface:
+                        List<InterpreterDataType> results = interpretMethodCall(object, objGetNext, List.of());
+                        InterpreterDataType result1 = results.get(0);
+                        InterpreterDataType result2 = results.get(1);
+                        if(result1 instanceof BooleanIDT bool) {
+                            if(loop.assignment.isPresent()) {
+                                VariableReferenceNode taken = loop.assignment.get();
+                                InterpreterDataType took = findVariable(taken.name, locals, object);
+                                took.Assign(result2);
+                            }
+                            if(bool.Value) {
+                                interpretStatementBlock(object, loop.statements, locals);
+                            }
+                            else
+                                done = true;
                         }
+                    }
+                    else if(iteratorTimes) {
+                        // Iterator Case Times:
+                        List<InterpreterDataType> taker = getNext();
+                        InterpreterDataType result1 = taker.get(0);
+                        InterpreterDataType result2 = taker.get(1);
+                        if(result1 instanceof BooleanIDT status) {
+                            if(loop.assignment.isPresent()) {
+                                VariableReferenceNode var = loop.assignment.get();
+                                InterpreterDataType search = findVariable(var.name, locals, object);
+                                NumberIDT number = (NumberIDT)search;
+                                NumberIDT from = (NumberIDT)result2;
+                                number.Assign(from);
+                            }
+                            if(status.Value) {
+                                interpretStatementBlock(object, loop.statements, locals);
+                            }
+                            else
+                                done = true;
+                        }
+                    }
+                    else {
+                        // Boolean Case:
+                        InterpreterDataType result = evaluate(locals, object, loop.expression);
+                        if(result instanceof BooleanIDT bool) {
+                            if(loop.assignment.isPresent()) {
+                                VariableReferenceNode assign = loop.assignment.get();
+                                InterpreterDataType toAssign = findVariable(assign.name, locals, object);
+                                BooleanIDT holder = (BooleanIDT) toAssign;
+                                holder.Assign(bool);
+                            }
+                            if(bool.Value) {
+                                interpretStatementBlock(object, loop.statements, locals);
+                            }
+                            else
+                                done = true;
+                        }
+                    }
+                }
+            }
+            else if(statement instanceof IfNode ifNode) {
+                InterpreterDataType solution = evaluate(locals, object, ifNode.condition);
+                if(solution instanceof BooleanIDT bool) {
+                    if(bool.Value) {
+                        interpretStatementBlock(object, ifNode.statements, locals);
+                    }
+                    else if(!bool.Value && ifNode.elseStatement.isPresent()) {
+                        interpretStatementBlock(object, ifNode.elseStatement.get().statements, locals);
                     }
                 }
             }
         }
-
     }
 
     /**
-     *  evaluate() processes everything that is an expression - math, variables, boolean expressions.
-     *  There is a good bit of recursion in here, since math and comparisons have left and right sides that need to be evaluated.
-     *
+     * evaluate() processes everything that is an expression - math, variables, boolean expressions.
+     * There is a good bit of recursion in here, since math and comparisons have left and right sides that need to be evaluated.
+     * <p>
      * See the How To Write an Interpreter document for examples
      * For each possible ExpressionNode, do the work to resolve it:
      * BooleanLiteralNode - create a new BooleanLiteralNode with the same value
-     *      - Same for all of the basic data types
+     * - Same for all of the basic data types
      * BooleanOpNode - Evaluate() left and right, then perform either and/or on the results.
      * CompareNode - Evaluate() both sides. Do good comparison for each data type
      * MathOpNode - Evaluate() both sides. If they are both numbers, do the math using the built-in operators. Also handle String + String as concatenation (like Java)
      * MethodCallExpression - call doMethodCall() and return the first value
      * VariableReferenceNode - call findVariable()
-     * @param locals the local variables
-     * @param object - the current object we are running
+     *
+     * @param locals     the local variables
+     * @param object     - the current object we are running
      * @param expression - some expression to evaluate
      * @return a value
      */
     private InterpreterDataType evaluate(HashMap<String, InterpreterDataType> locals, Optional<ObjectIDT> object, ExpressionNode expression) {
-        // Possibly implement BooleanLiteralNode for BooleanIDT later....
-        if(expression instanceof NumericLiteralNode number)
+        if (expression instanceof NumericLiteralNode number)
             return new NumberIDT(number.value);
-        if(expression instanceof StringLiteralNode string)
+        if (expression instanceof StringLiteralNode string)
             return new StringIDT(string.value);
-        if(expression instanceof CharLiteralNode chars)
+        if (expression instanceof CharLiteralNode chars)
             return new CharIDT(chars.value);
-        if(expression instanceof CompareNode c) {
+        if (expression instanceof CompareNode c) {
             InterpreterDataType left = evaluate(locals, object, c.left);
             InterpreterDataType right = evaluate(locals, object, c.right);
             if (left instanceof NumberIDT l && right instanceof NumberIDT r) {
-                if(c.op == CompareNode.CompareOperations.lt) {
+                if (c.op == CompareNode.CompareOperations.lt) {
                     return new BooleanIDT(l.Value < r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.gt) {
+                if (c.op == CompareNode.CompareOperations.gt) {
                     return new BooleanIDT(l.Value > r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.eq) {
+                if (c.op == CompareNode.CompareOperations.eq) {
                     return new BooleanIDT(l.Value == r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.ne) {
+                if (c.op == CompareNode.CompareOperations.ne) {
                     return new BooleanIDT(l.Value != r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.le) {
+                if (c.op == CompareNode.CompareOperations.le) {
                     return new BooleanIDT(l.Value <= r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.ge) {
+                if (c.op == CompareNode.CompareOperations.ge) {
                     return new BooleanIDT(l.Value >= r.Value);
                 }
             }
             if (left instanceof CharIDT l && right instanceof CharIDT r) {
-                if(c.op == CompareNode.CompareOperations.lt) {
+                if (c.op == CompareNode.CompareOperations.lt) {
                     return new BooleanIDT(l.Value < r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.gt) {
+                if (c.op == CompareNode.CompareOperations.gt) {
                     return new BooleanIDT(l.Value > r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.eq) {
+                if (c.op == CompareNode.CompareOperations.eq) {
                     return new BooleanIDT(l.Value == r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.ne) {
+                if (c.op == CompareNode.CompareOperations.ne) {
                     return new BooleanIDT(l.Value != r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.le) {
+                if (c.op == CompareNode.CompareOperations.le) {
                     return new BooleanIDT(l.Value <= r.Value);
                 }
-                if(c.op == CompareNode.CompareOperations.ge) {
+                if (c.op == CompareNode.CompareOperations.ge) {
                     return new BooleanIDT(l.Value >= r.Value);
                 }
             }
             if (left instanceof StringIDT l && right instanceof StringIDT r) {
-                if(c.op == CompareNode.CompareOperations.lt) {
+                if (c.op == CompareNode.CompareOperations.lt) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) < 0);
                 }
-                if(c.op == CompareNode.CompareOperations.gt) {
+                if (c.op == CompareNode.CompareOperations.gt) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) > 0);
                 }
-                if(c.op == CompareNode.CompareOperations.eq) {
+                if (c.op == CompareNode.CompareOperations.eq) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) == 0);
                 }
-                if(c.op == CompareNode.CompareOperations.ne) {
+                if (c.op == CompareNode.CompareOperations.ne) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) != 0);
                 }
-                if(c.op == CompareNode.CompareOperations.le) {
+                if (c.op == CompareNode.CompareOperations.le) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) <= 0);
                 }
-                if(c.op == CompareNode.CompareOperations.ge) {
+                if (c.op == CompareNode.CompareOperations.ge) {
                     return new BooleanIDT(l.Value.compareTo(r.Value) >= 0);
                 }
             }
 
         }
-        if(expression instanceof MathOpNode math) {
+        if (expression instanceof MathOpNode math) {
             InterpreterDataType left = evaluate(locals, object, math.left);
             InterpreterDataType right = evaluate(locals, object, math.right);
-            if(left instanceof NumberIDT l && right instanceof NumberIDT r) {
-                switch(math.op) {
+            if (left instanceof NumberIDT l && right instanceof NumberIDT r) {
+                switch (math.op) {
                     case add -> {
                         return new NumberIDT(l.Value + r.Value);
                     }
@@ -391,21 +513,21 @@ public class Interpreter {
                     }
                 }
             }
-            if(left instanceof StringIDT l && right instanceof StringIDT r) {
-                switch(math.op) {
+            if (left instanceof StringIDT l && right instanceof StringIDT r) {
+                switch (math.op) {
                     case add -> {
                         return new StringIDT(l.Value + r.Value);
                     }
                 }
             }
         }
-        if(expression instanceof MethodCallExpressionNode mce) {
+        if (expression instanceof MethodCallExpressionNode mce) {
             MethodCallStatementNode mse = new MethodCallStatementNode(mce);
             List<InterpreterDataType> result = findMethodForMethodCallAndRunIt(object, locals, mse);
             return result.get(0);
 
         }
-        if(expression instanceof VariableReferenceNode variable) {
+        if (expression instanceof VariableReferenceNode variable) {
             return findVariable(variable.name, locals, object);
         }
         throw new IllegalArgumentException();
@@ -416,19 +538,20 @@ public class Interpreter {
     /**
      * Used when trying to find a match to a method call. Given a method declaration, does it match this methoc call?
      * We double check with the parameters, too, although in theory JUST checking the declaration to the call should be enough.
-     *
+     * <p>
      * Match names, parameter counts (both declared count vs method call and declared count vs value list), return counts.
      * If all of those match, consider the types (use TypeMatchToIDT).
      * If everything is OK, return true, else return false.
      * Note - if m is a built-in and isVariadic is true, skip all of the parameter validation.
-     * @param m - the method declaration we are considering
-     * @param mc - the method call we are trying to match
+     *
+     * @param m          - the method declaration we are considering
+     * @param mc         - the method call we are trying to match
      * @param parameters - the parameter values for this method call
      * @return does this method match the method call?
      */
     private boolean doesMatch(MethodDeclarationNode m, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
-        if(m instanceof BuiltInMethodDeclarationNode && ((BuiltInMethodDeclarationNode) m).isVariadic) {
-            if(m.name.equals(mc.methodName)) {
+        if (m instanceof BuiltInMethodDeclarationNode && ((BuiltInMethodDeclarationNode) m).isVariadic) {
+            if (m.name.equals(mc.methodName)) {
                 return true;
             }
             return false;
@@ -439,7 +562,7 @@ public class Interpreter {
             for (int i = 0; i < numOfParameters; i++) {
                 VariableDeclarationNode vr = m.parameters.get(i);
                 InterpreterDataType idt = parameters.get(i);
-                if(!typeMatchToIDT(vr.type, idt)) {
+                if (!typeMatchToIDT(vr.type, idt)) {
                     return false;
                 }
             }
@@ -450,18 +573,19 @@ public class Interpreter {
 
     /**
      * Very similar to DoesMatch() except simpler - there are no return values, the name will always match.
-     * @param c - a particular constructor
-     * @param mc - the method call
+     *
+     * @param c          - a particular constructor
+     * @param mc         - the method call
      * @param parameters - the parameter values
      * @return does this constructor match the method call?
      */
     private boolean doesConstructorMatch(ConstructorNode c, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
-        if(c.parameters.size() == mc.parameters.size() && c.parameters.size() == parameters.size()) {
+        if (c.parameters.size() == mc.parameters.size() && c.parameters.size() == parameters.size()) {
             int numberOfParameters = c.parameters.size();
-            for(int i = 0; i < numberOfParameters; i++) {
+            for (int i = 0; i < numberOfParameters; i++) {
                 VariableDeclarationNode vr = c.parameters.get(i);
                 InterpreterDataType idt = parameters.get(i);
-                if(!(typeMatchToIDT(vr.type, idt))) {
+                if (!(typeMatchToIDT(vr.type, idt))) {
                     return false;
                 }
             }
@@ -472,37 +596,40 @@ public class Interpreter {
 
     /**
      * Used when we call a method to get the list of values for the parameters.
-     *
+     * <p>
      * for each parameter in the method call, call Evaluate() on the parameter to get an IDT and add it to a list
+     *
      * @param object - the current object
      * @param locals - the local variables
-     * @param mc - a method call
+     * @param mc     - a method call
      * @return the list of method values
      */
-    private List<InterpreterDataType> getParameters(Optional<ObjectIDT> object, HashMap<String,InterpreterDataType> locals, MethodCallStatementNode mc) {
+    private List<InterpreterDataType> getParameters(Optional<ObjectIDT> object, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc) {
         int numParameters = mc.parameters.size();
         List<InterpreterDataType> result = new ArrayList<>();
-        for(int i = 0; i < numParameters; i++) {
+        for (int i = 0; i < numParameters; i++) {
             ExpressionNode holder = mc.parameters.get(i);
             InterpreterDataType idt = evaluate(locals, object, holder);
             result.add(idt);
         }
         return result;
     }
+
     /**
      * Used when we have an IDT and we want to see if it matches a type definition
      * Commonly, when someone is making a function call - do the parameter values match the method declaration?
-     *
+     * <p>
      * If the IDT is a simple type (boolean, number, etc) - does the string type match the name of that IDT ("boolean", etc)
      * If the IDT is an object, check to see if the name matches OR the class has an interface that matches
      * If the IDT is a reference, check the inner (refered to) type
+     *
      * @param type the name of a data type (parameter to a method)
-     * @param idt the IDT someone is trying to pass to this method
+     * @param idt  the IDT someone is trying to pass to this method
      * @return is this OK?
      */
     private boolean typeMatchToIDT(String type, InterpreterDataType idt) {
-        if(idt instanceof StringIDT || idt instanceof NumberIDT || idt instanceof BooleanIDT ||
-            idt instanceof CharIDT || idt instanceof ObjectIDT || idt instanceof ReferenceIDT) {
+        if (idt instanceof StringIDT || idt instanceof NumberIDT || idt instanceof BooleanIDT ||
+                idt instanceof CharIDT || idt instanceof ObjectIDT || idt instanceof ReferenceIDT) {
             if (type.equals("boolean") && idt instanceof BooleanIDT) {
                 return true;
             }
@@ -545,18 +672,19 @@ public class Interpreter {
 
     /**
      * Find a method in an object that is the right match for a method call (same name, parameters match, etc. Uses doesMatch() to do most of the work)
-     *
+     * <p>
      * Given a method call, we want to loop over the methods for that class, looking for a method that matches (use DoesMatch) or throw
-     * @param object - an object that we want to find a method on
-     * @param mc - the method call
+     *
+     * @param object     - an object that we want to find a method on
+     * @param mc         - the method call
      * @param parameters - the parameter value list
      * @return a method or throws an exception
      */
     private MethodDeclarationNode getMethodFromObject(ObjectIDT object, MethodCallStatementNode mc, List<InterpreterDataType> parameters) {
         int numbOfMethods = object.astNode.methods.size();
-        for(int i = 0; i < numbOfMethods; i++) {
+        for (int i = 0; i < numbOfMethods; i++) {
             MethodDeclarationNode mde = object.astNode.methods.get(i);
-            if(doesMatch(mde, mc, parameters)) {
+            if (doesMatch(mde, mc, parameters)) {
                 return mde;
             }
         }
@@ -565,15 +693,16 @@ public class Interpreter {
 
     /**
      * Find a class, given the name. Just loops over the TranNode's classes member, matching by name.
-     *
+     * <p>
      * Loop over each class in the top node, comparing names to find a match.
+     *
      * @param name Name of the class to find
      * @return either a class node or empty if that class doesn't exist
      */
     private Optional<ClassNode> getClassByName(String name) {
         int numberOfClasses = head.Classes.size();
-        for(int i = 0; i < numberOfClasses; i++) {
-            if(head.Classes.get(i).name.equals(name)) {
+        for (int i = 0; i < numberOfClasses; i++) {
+            if (head.Classes.get(i).name.equals(name)) {
                 ClassNode cl = head.Classes.get(i);
                 return Optional.of(cl);
             }
@@ -584,18 +713,18 @@ public class Interpreter {
     /**
      * Given an execution environment (the current object, the current local variables), find a variable by name.
      *
-     * @param name  - the variable that we are looking for
+     * @param name   - the variable that we are looking for
      * @param locals - the current method's local variables
      * @param object - the current object (so we can find members)
      * @return the IDT that we are looking for or throw an exception
      */
-    private InterpreterDataType findVariable(String name, HashMap<String,InterpreterDataType> locals, Optional<ObjectIDT> object) {
-        if(locals.containsKey(name)) {
-            InterpreterDataType placement  = locals.get(name);
+    private InterpreterDataType findVariable(String name, HashMap<String, InterpreterDataType> locals, Optional<ObjectIDT> object) {
+        if (locals.containsKey(name)) {
+            InterpreterDataType placement = locals.get(name);
             return placement;
         }
-        if(object.isPresent()) {
-            if(object.get().members.containsKey(name)) {
+        if (object.isPresent()) {
+            if (object.get().members.containsKey(name)) {
                 InterpreterDataType holder = object.get().members.get(name);
                 return holder;
             }
@@ -627,5 +756,37 @@ public class Interpreter {
                 return new ReferenceIDT();
             }
         }
+    }
+
+    /**
+     * This method checks for the presence of an iterator interface that is implemented by the object's
+     * class. It returns true as soon as it finds one and if not it returns false.
+     *
+     * @param sample The object.
+     * @return The status of whether an iterator interface is implemented or not.
+     */
+    public boolean checkIteratorInterface(ObjectIDT sample) {
+        int numInterfaces = sample.astNode.interfaces.size();
+        for (int i = 0; i < numInterfaces; i++) {
+            String currInterface = sample.astNode.interfaces.get(i);
+            if (currInterface.equals("iterator")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public List<InterpreterDataType> getNext() {
+        List<InterpreterDataType> result = new ArrayList<>();
+        if(iterator.hasNext()) {
+            InterpreterDataType holder = iterator.next();
+            NumberIDT converted = (NumberIDT)holder;
+            result.add(new BooleanIDT(true));
+            result.add(converted);
+            return result;
+        }
+        result.add(new BooleanIDT(false));
+        result.add(new NumberIDT(0));
+        return result;
     }
 }
