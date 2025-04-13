@@ -166,7 +166,33 @@ public class Interpreter {
      */
     private List<InterpreterDataType> interpretMethodCall(Optional<ObjectIDT> object, MethodDeclarationNode m, List<InterpreterDataType> values) {
         var retVal = new LinkedList<InterpreterDataType>();
-        return retVal;
+        if(m instanceof BuiltInMethodDeclarationNode built) {
+            return(built.Execute(values));
+        }
+        HashMap<String, InterpreterDataType> locals = new HashMap<>();
+        int numberLocals = m.locals.size();
+        for(int i = 0; i < numberLocals; i++) {
+            VariableDeclarationNode local = m.locals.get(i);
+            InterpreterDataType result = instantiate(local.type);
+            locals.put(local.name, result);
+        }
+        if(m.parameters.size() != values.size()) {
+            throw new RuntimeException("Number of parameters does not match");
+        }
+        else {
+            int numberParams = m.parameters.size();
+            for(int i = 0; i < numberParams; i++) {
+                VariableDeclarationNode param = m.parameters.get(i);
+                locals.put(param.name, values.get(i));
+            }
+            interpretStatementBlock(object, m.statements, locals);
+            int numberReturns = m.returns.size();
+            for(int i = 0; i < numberReturns; i++) {
+                VariableDeclarationNode toReturn = m.returns.get(i);
+                retVal.add(locals.get(toReturn.name));
+            }
+            return retVal;
+        }
     }
 
     //              Running Constructors
@@ -529,6 +555,32 @@ public class Interpreter {
         }
         if (expression instanceof VariableReferenceNode variable) {
             return findVariable(variable.name, locals, object);
+        }
+        if(expression instanceof NewNode newNode) {
+            Optional<ClassNode> taker = getClassByName(newNode.className);
+            if(taker.isPresent()) {
+                ClassNode cl = taker.get();
+                ObjectIDT obj = new ObjectIDT(cl);
+                int numberMembers = obj.astNode.members.size();
+                for(int i = 0; i < numberMembers; i++) {
+                    MemberNode member = obj.astNode.members.get(i);
+                    InterpreterDataType holder = instantiate(member.declaration.type);
+                    obj.members.put(member.declaration.name, holder);
+                }
+                MethodCallStatementNode ms = new MethodCallStatementNode();
+                ms.methodName = newNode.className;
+                ms.objectName = Optional.empty();
+                int numberParam = newNode.parameters.size();
+                for(int i = 0; i < numberParam; i++) {
+                    ms.parameters.add(newNode.parameters.get(i));
+                }
+                HashMap<String, InterpreterDataType> container = new HashMap<>();
+                findConstructorAndRunIt(Optional.empty(), container, ms, obj);
+                ReferenceIDT ref = new ReferenceIDT();
+                ref.Assign(obj);
+                return ref;
+            }
+            throw new RuntimeException("No corresponding class for " + newNode.className);
         }
         throw new IllegalArgumentException();
     }
