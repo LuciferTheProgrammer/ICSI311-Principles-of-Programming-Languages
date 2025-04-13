@@ -874,6 +874,7 @@ public class Parser {
      */
     public Optional<MethodCallExpressionNode> MethodCallExpression() throws SyntaxErrorException {
         MethodCallExpressionNode mce = new MethodCallExpressionNode();
+        mce.objectName = Optional.empty();
         if(manageTokens.nextTwoTokensMatch(Token.TokenTypes.WORD, Token.TokenTypes.DOT)) {
             manageTokens.matchAndRemove(Token.TokenTypes.WORD);
             String nameHolder = manageTokens.getCurrentText();

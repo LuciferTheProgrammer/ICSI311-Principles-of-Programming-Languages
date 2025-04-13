@@ -7,7 +7,6 @@ import java.util.*;
 public class Interpreter {
 
     public TranNode head;
-    public HashMap<String, BuiltInMethodDeclarationNode> builtIn;
     public Iterator<InterpreterDataType> iterator;
 
     /**
@@ -82,67 +81,46 @@ public class Interpreter {
      */
     private List<InterpreterDataType> findMethodForMethodCallAndRunIt(Optional<ObjectIDT> object, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc) {
         List<InterpreterDataType> holder = getParameters(object, locals, mc);
-        List<InterpreterDataType> result;
-        if (mc.objectName.isEmpty() && object.isPresent()) {
-            int numMethods = object.get().astNode.methods.size();
-            for (int i = 0; i < numMethods; i++) {
-                MethodDeclarationNode mde = object.get().astNode.methods.get(i);
-                if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
-                        && mde.returns.size() == mc.returnValues.size()) {
-                    result = interpretMethodCall(object, mde, holder);
-                    return result;
+        if(mc.objectName.isPresent()) {
+            Optional<ClassNode> cl = getClassByName(mc.objectName.get());
+            if (cl.isEmpty()) {
+                InterpreterDataType result = findVariable(mc.objectName.get(), locals, object);
+                if (result instanceof ReferenceIDT ref) {
+                    if (ref.refersTo.isPresent()) {
+                        ObjectIDT temp = ref.refersTo.get();
+                        int numberOfMethods = temp.astNode.methods.size();
+                        for (int i = 0; i < numberOfMethods; i++) {
+                            MethodDeclarationNode mde = temp.astNode.methods.get(i);
+                            if (doesMatch(mde, mc, holder)) {
+                                return (interpretMethodCall(Optional.of(temp), mde, holder));
+                            }
+                        }
+                    }
                 }
-            }
-        } else if (mc.objectName.isPresent() && object.isEmpty()) {
-            //String builtInName = mc.objectName.get() + "." + mc.methodName;
-            //if(builtIn.containsKey(builtInName)) {
-            //    ConsoleWrite cr = (ConsoleWrite) builtIn.get(builtInName);
-            //    result = interpretMethodCall(Optional.empty(), cr, holder);
-            //    return result;
-            //}
-            int numClasses = head.Classes.size();
-            for (int i = 0; i < numClasses; i++) {
-                if (mc.objectName.get().equals(head.Classes.get(i).name)) {
-                    int methods = head.Classes.get(i).methods.size();
-                    for (int k = 0; k < methods; k++) {
-                        MethodDeclarationNode mde = head.Classes.get(i).methods.get(k);
-                        if (mc.methodName.equals(mde.name) && mde.isShared && mde.parameters.size() == mc.parameters.size()
-                                && mde.returns.size() == mc.returnValues.size()) {
-                            result = interpretMethodCall(Optional.empty(), mde, holder);
-                            return result;
+                if (result instanceof ObjectIDT obj) {
+                    int numberOfMethods = obj.astNode.methods.size();
+                    for (int i = 0; i < numberOfMethods; i++) {
+                        MethodDeclarationNode mde = obj.astNode.methods.get(i);
+                        if (doesMatch(mde, mc, holder)) {
+                            return (interpretMethodCall(Optional.of(obj), mde, holder));
                         }
                     }
                 }
             }
-        } else if (mc.objectName.isPresent()) {
-            String placement = mc.objectName.get();
-            if (locals.containsKey(placement)) {
-                ObjectIDT idt = (ObjectIDT) locals.get(placement);
-                int numMethods = idt.astNode.methods.size();
-                for (int i = 0; i < numMethods; i++) {
-                    MethodDeclarationNode mde = idt.astNode.methods.get(i);
-                    if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size() &&
-                            mde.returns.size() == mc.returnValues.size()) {
-                        result = interpretMethodCall(Optional.of(idt), mde, holder);
-                        return result;
-                    }
-                }
-            }
-            if (object.isPresent()) {
-                if (object.get().members.containsKey(placement)) {
-                    ObjectIDT idt = (ObjectIDT) object.get().members.get(placement);
-                    int numMethods = idt.astNode.methods.size();
-                    for (int i = 0; i < numMethods; i++) {
-                        MethodDeclarationNode mde = idt.astNode.methods.get(i);
-                        if (mde.name.equals(mc.methodName) && mde.parameters.size() == mc.parameters.size()
-                                && mde.returns.size() == mc.returnValues.size()) {
-                            result = interpretMethodCall(Optional.of(idt), mde, holder);
-                            return result;
+            else {
+                    ClassNode classNode = cl.get();
+                    int numberMethods = classNode.methods.size();
+                    for(int i = 0; i < numberMethods; i++) {
+                        MethodDeclarationNode mde = classNode.methods.get(i);
+                        if(doesMatch(mde, mc, holder) && mde.isShared) {
+                            return (interpretMethodCall(object, mde, holder));
                         }
                     }
-                }
-
             }
+        }
+        else if(mc.objectName.isEmpty() && object.isPresent()) {
+            MethodDeclarationNode placement = getMethodFromObject(object.get(), mc, holder);
+            return(interpretMethodCall(object, placement, holder));
         }
         throw new RuntimeException("No method to match");
     }
@@ -176,6 +154,11 @@ public class Interpreter {
             InterpreterDataType result = instantiate(local.type);
             locals.put(local.name, result);
         }
+        int numberReturns = m.returns.size();
+        for(int i = 0; i < numberReturns; i++) {
+            locals.put(m.returns.get(i).name, instantiate(m.returns.get(i).type));
+        }
+
         if(m.parameters.size() != values.size()) {
             throw new RuntimeException("Number of parameters does not match");
         }
@@ -186,7 +169,6 @@ public class Interpreter {
                 locals.put(param.name, values.get(i));
             }
             interpretStatementBlock(object, m.statements, locals);
-            int numberReturns = m.returns.size();
             for(int i = 0; i < numberReturns; i++) {
                 VariableDeclarationNode toReturn = m.returns.get(i);
                 retVal.add(locals.get(toReturn.name));
@@ -588,7 +570,7 @@ public class Interpreter {
     //              Utility Methods
 
     /**
-     * Used when trying to find a match to a method call. Given a method declaration, does it match this methoc call?
+     * Used when trying to find a match to a method call. Given a method declaration, does it match this method call?
      * We double check with the parameters, too, although in theory JUST checking the declaration to the call should be enough.
      * <p>
      * Match names, parameter counts (both declared count vs method call and declared count vs value list), return counts.
@@ -609,7 +591,7 @@ public class Interpreter {
             return false;
         }
         if (m.name.equals(mc.methodName) && m.parameters.size() == mc.parameters.size() && m.parameters.size() == parameters.size()
-                && m.returns.size() == mc.returnValues.size()) {
+                &&  (mc.returnValues.isEmpty() || m.returns.size() == mc.returnValues.size())) {
             int numOfParameters = m.parameters.size();
             for (int i = 0; i < numOfParameters; i++) {
                 VariableDeclarationNode vr = m.parameters.get(i);
