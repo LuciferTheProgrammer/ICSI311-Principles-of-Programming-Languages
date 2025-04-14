@@ -114,14 +114,14 @@ public class Interpreter {
                 }
             }
             else {
-                    ClassNode classNode = cl.get();
-                    int numberMethods = classNode.methods.size();
-                    for(int i = 0; i < numberMethods; i++) {
-                        MethodDeclarationNode mde = classNode.methods.get(i);
-                        if(doesMatch(mde, mc, holder) && mde.isShared) {
+                ClassNode classNode = cl.get();
+                int numberMethods = classNode.methods.size();
+                for(int i = 0; i < numberMethods; i++) {
+                    MethodDeclarationNode mde = classNode.methods.get(i);
+                    if(doesMatch(mde, mc, holder) && mde.isShared) {
                             return (interpretMethodCall(object, mde, holder));
-                        }
                     }
+                }
             }
         }
         else if(mc.objectName.isEmpty() && object.isPresent()) {
