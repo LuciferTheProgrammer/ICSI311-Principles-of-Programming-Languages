@@ -288,7 +288,6 @@ public class Interpreter {
                 targetResult.Assign(eval);
             }
             else if (statement instanceof MethodCallStatementNode ms) {
-                //To implement findConstructorAndRunIt Later.....
                 List<InterpreterDataType> result = findMethodForMethodCallAndRunIt(object, locals, ms);
                 int numReturns = result.size();
                 for (int i = 0; i < numReturns; i++) {
@@ -316,8 +315,8 @@ public class Interpreter {
                         throw new RuntimeException("No getNext method found");
                     }
                 }
-                else if(loop.expression instanceof MethodCallExpressionNode mce && mce.methodName
-                        .equals("times")) {
+                else if(loop.expression instanceof MethodCallExpressionNode mce && mce.objectName.isPresent() &&
+                        mce.methodName.equals("times")) {
                     iteratorTimes = true;
                     InterpreterDataType placement = evaluate(locals, object, loop.expression);
                     if (placement instanceof NumberIDT num) {
