@@ -816,6 +816,13 @@ public class Interpreter {
         return false;
     }
 
+    /**
+     * Optional for the iterator case. Implementation of built-in iterator for getNext() which checks to see if
+     * a next element is present, if there is it returns a flag of true and  a value.
+     * Otherwise, it returns a flag of false and a value of 0 to signal that there is no next element.
+     *
+     *  @return List of values.
+     */
     public List<InterpreterDataType> getNext() {
         List<InterpreterDataType> result = new ArrayList<>();
         if(iterator.hasNext()) {
