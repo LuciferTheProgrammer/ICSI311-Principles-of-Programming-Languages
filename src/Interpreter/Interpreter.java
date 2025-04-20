@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -56,7 +55,7 @@ public class Interpreter {
                 String name = head.Classes.get(i).methods.get(k).name;
                 int noParam = head.Classes.get(i).methods.get(k).parameters.size();
                 if (shared && !privateHolder && name.equals("start") && noParam == 0) {
-                    List<InterpreterDataType> param = new ArrayList<>();
+                    List<InterpreterDataType> param = new LinkedList<>();
                     interpretMethodCall(Optional.empty(), mde, param);
                     return;
                 }
@@ -646,7 +645,7 @@ public class Interpreter {
      */
     private List<InterpreterDataType> getParameters(Optional<ObjectIDT> object, HashMap<String, InterpreterDataType> locals, MethodCallStatementNode mc) {
         int numParameters = mc.parameters.size();
-        List<InterpreterDataType> result = new ArrayList<>();
+        List<InterpreterDataType> result = new LinkedList<>();
         for (int i = 0; i < numParameters; i++) {
             ExpressionNode holder = mc.parameters.get(i);
             InterpreterDataType idt = evaluate(locals, object, holder);
@@ -824,7 +823,7 @@ public class Interpreter {
      *  @return List of values.
      */
     public List<InterpreterDataType> getNext() {
-        List<InterpreterDataType> result = new ArrayList<>();
+        List<InterpreterDataType> result = new LinkedList<>();
         if(iterator.hasNext()) {
             InterpreterDataType holder = iterator.next();
             NumberIDT converted = (NumberIDT)holder;
